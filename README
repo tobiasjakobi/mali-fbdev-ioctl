@@ -1,0 +1,7 @@
+A collection of tools to analyze the fbdev ioctl behaviour of the Mali (r4p0) userspace blob.
+
+test: initialize EGL and do some test rendering
+dump: acts as a preloader and dumps ioctl calls made by the Mali blob
+hook: preloader that overrides ioctls calls made by the blob
+
+The idea is to extend 'hook' such that it translates all calls to the fbdev layer (which are emulated) to calls to the DRM layer.
