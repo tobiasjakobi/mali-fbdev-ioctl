@@ -86,15 +86,14 @@ int main(int argc, char* argv[])
   if ((err != NULL) || (setup_hook_callback == NULL)) {
     fprintf(stderr, "dlsym(setup_hook_callback) failed\n");
     fprintf(stderr, "dlerror = %s\n", err);
-    return -1;
+  } else {
+    setup_hook_callback(FBIOGET_VSCREENINFO, emulate_get_var_screeninfo);
+    setup_hook_callback(FBIOPUT_VSCREENINFO, emulate_put_var_screeninfo);
+    setup_hook_callback(FBIOGET_FSCREENINFO, emulate_get_fix_screeninfo);
+    setup_hook_callback(FBIOPAN_DISPLAY, emulate_pan_display);
+    setup_hook_callback(FBIO_WAITFORVSYNC, emulate_waitforvsync);
+    setup_hook_callback(IOCTL_GET_FB_DMA_BUF, emulate_get_fb_dma_buf);
   }
-
-  setup_hook_callback(FBIOGET_VSCREENINFO, emulate_get_var_screeninfo);
-  setup_hook_callback(FBIOPUT_VSCREENINFO, emulate_put_var_screeninfo);
-  setup_hook_callback(FBIOGET_FSCREENINFO, emulate_get_fix_screeninfo);
-  setup_hook_callback(FBIOPAN_DISPLAY, emulate_pan_display);
-  setup_hook_callback(FBIO_WAITFORVSYNC, emulate_waitforvsync);
-  setup_hook_callback(IOCTL_GET_FB_DMA_BUF, emulate_get_fb_dma_buf);
 
   static const EGLint attribs[] = {
     EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT,
