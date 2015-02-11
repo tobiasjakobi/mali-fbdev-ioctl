@@ -9,31 +9,6 @@ static callbackfnc pan_display_cb = NULL;
 static callbackfnc waitforvsync_cb = NULL;
 static callbackfnc get_fb_dma_buf_cb = NULL;
 
-static int emulate_get_var_screeninfo(void *ptr) {
-  struct fb_var_screeninfo *data = ptr;
-
-  memset(data, 0, sizeof(struct fb_var_screeninfo));
-
-  data->xres = 1280;
-  data->yres = 720;
-
-  data->xres_virtual = 1280;
-  data->yres_virtual = 720;
-
-  data->bits_per_pixel = 16;
-
-  data->red.offset = 10;
-  data->green.offset = 5;
-  data->blue.offset = 0;
-  data->red.length = 5;
-  data->green.length = 5;
-  data->blue.length = 5;
-  data->transp.length = 0;
-  data->transp.offset = 0;
-
-  return 0;
-}
-
 int setup_hook_callback(unsigned long req, callbackfnc cb) {
   int ret = 0;
 
