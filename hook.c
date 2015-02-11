@@ -144,7 +144,7 @@ int ioctl(int fd, unsigned long request, ...) {
     if (cb) {
       ret = cb(p);
     } else {
-      fprintf(stderr, "info: unknown fbdev ioctl (0x%x) called\n", (unsigned int)request);
+      fprintf(stderr, "info: unhooked fbdev ioctl (0x%x) called\n", (unsigned int)request);
       ret = fptr(fd, request, p);
     }
   } else if (fd == mali_fd) {
@@ -161,7 +161,7 @@ int ioctl(int fd, unsigned long request, ...) {
     if (cb) {
       ret = cb(p);
     } else {
-      fprintf(stderr, "info: unknown mali ioctl (0x%x) called\n", (unsigned int)request);
+      fprintf(stderr, "info: unhooked mali ioctl (0x%x) called\n", (unsigned int)request);
       ret = fptr(fd, request, p);
     }
   } else {
