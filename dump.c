@@ -119,6 +119,129 @@ static void dump_uk_notification_type(_mali_uk_notification_type val) {
   fprintf(stderr, "notification: %s\n", msg);
 }
 
+static void dump_uk_job_status(_mali_uk_job_status val) {
+  const char* msg;
+
+  switch (val) {
+    case _MALI_UK_JOB_STATUS_END_SUCCESS:
+      msg = "end success";
+      break;
+    case _MALI_UK_JOB_STATUS_END_OOM:
+      msg = "end oom";
+      break;
+    case _MALI_UK_JOB_STATUS_END_ABORT:
+      msg = "end abort";
+      break;
+    case _MALI_UK_JOB_STATUS_END_TIMEOUT_SW:
+      msg = "end timeout sw";
+      break;
+    case _MALI_UK_JOB_STATUS_END_HANG:
+      msg = "end hang";
+      break;
+    case _MALI_UK_JOB_STATUS_END_SEG_FAULT:
+      msg = "end seg fault";
+      break;
+    case _MALI_UK_JOB_STATUS_END_ILLEGAL_JOB:
+      msg = "end illegal job";
+      break;
+    case _MALI_UK_JOB_STATUS_END_UNKNOWN_ERR:
+      msg = "end unknown err";
+      break;
+    case _MALI_UK_JOB_STATUS_END_SHUTDOWN:
+      msg = "end shutdown";
+      break;
+    case _MALI_UK_JOB_STATUS_END_SYSTEM_UNUSABLE:
+      msg = "end system unusable";
+      break;
+    default:
+      msg = "unknown";
+      break;
+  }
+
+  fprintf(stderr, "job status: %s\n", msg);
+}
+
+static void dump_uk_user_setting(_mali_uk_user_setting_t val) {
+  const char* msg;
+
+  switch (val) {
+    case _MALI_UK_USER_SETTING_SW_EVENTS_ENABLE:
+      msg = "sw events enable";
+      break;
+    case _MALI_UK_USER_SETTING_COLORBUFFER_CAPTURE_ENABLED:
+      msg = "colorbuffer capture enabled";
+      break;
+    case _MALI_UK_USER_SETTING_DEPTHBUFFER_CAPTURE_ENABLED:
+      msg = "depthbuffer capture enabled";
+      break;
+    case _MALI_UK_USER_SETTING_STENCILBUFFER_CAPTURE_ENABLED:
+      msg = "stencilbuffer capture enabled";
+      break;
+    case _MALI_UK_USER_SETTING_PER_TILE_COUNTERS_CAPTURE_ENABLED:
+      msg = "per tile counters capture enabled";
+      break;
+    case _MALI_UK_USER_SETTING_BUFFER_CAPTURE_COMPOSITOR:
+      msg = "buffer capture compositor";
+      break;
+    case _MALI_UK_USER_SETTING_BUFFER_CAPTURE_WINDOW:
+      msg = "buffer capture window";
+      break;
+    case _MALI_UK_USER_SETTING_BUFFER_CAPTURE_OTHER:
+      msg = "buffer capture other";
+      break;
+    case _MALI_UK_USER_SETTING_BUFFER_CAPTURE_N_FRAMES:
+      msg = "buffer capture n frames";
+      break;
+    case _MALI_UK_USER_SETTING_BUFFER_CAPTURE_RESIZE_FACTOR:
+      msg = "buffer capture resize factor";
+      break;
+    case _MALI_UK_USER_SETTING_SW_COUNTER_ENABLED:
+      msg = "sw counter enabled";
+      break;
+    default:
+      msg = "unknown";
+      break;
+  }
+
+  fprintf(stderr, "user setting: %s\n", msg);
+}
+
+static void dump_uk_gp_job_suspended(const _mali_uk_gp_job_suspended_s *data) {
+  fprintf(stderr, "user_job_ptr = %u, cookie = %u\n",
+    data->user_job_ptr, data->cookie);
+}
+
+static void dump_uk_gp_job_finished(const _mali_uk_gp_job_finished_s *data) {
+  fprintf(stderr, "user_job_ptr = %u\n", data->user_job_ptr);
+  dump_uk_job_status(data->status);
+  fprintf(stderr, "heap_current_addr = %u\n@", data->heap_current_addr);
+  fprintf(stderr, "perf_counter = {%u, %u}\n", data->perf_counter0, data->perf_counter1);
+}
+
+static void dump_uk_pp_job_finished(const _mali_uk_pp_job_finished_s *data) {
+  unsigned i;
+
+  fprintf(stderr, "user_job_ptr = %u\n", data->user_job_ptr);
+  dump_uk_job_status(data->status);
+
+  for (i = 0; i < _MALI_PP_MAX_SUB_JOBS; ++i) {
+    fprintf(stderr, "perf_counter[%u] = {%u, %u}\n",
+      i, data->perf_counter0[i], data->perf_counter1[i]);
+  }
+
+  fprintf(stderr, "perf_counter_src0 = %u, perf_counter_src1 = %u\n",
+    data->perf_counter_src0, data->perf_counter_src1);
+}
+
+static void dump_uk_settings_changed(const _mali_uk_settings_changed_s *data) {
+  dump_uk_user_setting(data->setting);
+  fprintf(stderr, "value = %u\n", data->value);
+}
+
+static void dump_uk_soft_job_activated(const _mali_uk_soft_job_activated_s *data) {
+  fprintf(stderr, "user_job = %u\n", data->user_job);
+}
+
 static void dump_mali_get_api_version(const void *ptr) {
   const _mali_uk_get_api_version_s *data = ptr;
 
@@ -133,19 +256,19 @@ static void dump_mali_wait_for_notification(const void *ptr) {
 
   switch (data->type) {
     case _MALI_NOTIFICATION_GP_STALLED:
-      /* TODO: _mali_uk_gp_job_suspended_s gp_job_suspended */
+      dump_uk_gp_job_suspended(&data->data.gp_job_suspended);
       break;
     case _MALI_NOTIFICATION_GP_FINISHED:
-      /* TODO: _mali_uk_gp_job_finished_s  gp_job_finished */
+      dump_uk_gp_job_finished(&data->data.gp_job_finished);
       break;
     case _MALI_NOTIFICATION_PP_FINISHED:
-      /* TODO: _mali_uk_pp_job_finished_s  pp_job_finished */
+      dump_uk_pp_job_finished(&data->data.pp_job_finished);
       break;
     case _MALI_NOTIFICATION_SETTINGS_CHANGED:
-      /* TODO: _mali_uk_settings_changed_s setting_changed */
+      dump_uk_settings_changed(&data->data.setting_changed);
       break;
     case _MALI_NOTIFICATION_SOFT_ACTIVATED:
-      /* TODO: _mali_uk_soft_job_activated_s soft_job_activated */
+      dump_uk_soft_job_activated(&data->data.soft_job_activated);
       break;
     default:
       break;
@@ -282,7 +405,8 @@ int ioctl(int fd, unsigned long request, ...) {
         break;
 
       default:
-        fprintf(stderr, "unknown fbdev ioctl (0x%x) called\n", (unsigned int)request);
+        fprintf(stderr, "info: unknown fbdev ioctl (0x%x) called\n", (unsigned int)request);
+        ret = fptr(fd, request, p);
         break;
     }
   } else if (fd == mali_fd) {
@@ -324,7 +448,8 @@ int ioctl(int fd, unsigned long request, ...) {
         break;
 
       default:
-        fprintf(stderr, "unknown mali ioctl (0x%x) called\n", (unsigned int)request);
+        fprintf(stderr, "info: unknown mali ioctl (0x%x) called\n", (unsigned int)request);
+        ret = fptr(fd, request, p);
         break;
     }
   } else {
