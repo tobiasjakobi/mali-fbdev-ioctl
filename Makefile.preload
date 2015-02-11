@@ -1,6 +1,6 @@
 optflags := -O2 -march=armv7-a -mcpu=cortex-a9 -mfpu=neon -mfloat-abi=hard
 compiler := gcc
-cflags   := -fPIC -rdynamic
+cflags   := -D_GNU_SOURCE -fPIC -rdynamic
 ldflags  := -shared -nostartfiles
 
 ifndef platform

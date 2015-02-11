@@ -1,7 +1,6 @@
 #ifndef _COMMON_H_
 #define _COMMON_H_
 
-#define _GNU_SOURCE 1
 #include <stdio.h>
 #include <stdarg.h>
 #include <dlfcn.h>

@@ -1,7 +1,7 @@
 optflags := -O2 -march=armv7-a -mcpu=cortex-a9 -mfpu=neon -mfloat-abi=hard
 compiler := gcc
-cflags   := 
-ldflags  := -L$(HOME)/local/lib/mali-r4p0-fbdev -lMali
+cflags   := -D_GNU_SOURCE
+ldflags  := -L$(HOME)/local/lib/mali-r4p0-fbdev -lMali -ldl
 
 ifndef platform
 platform := $(shell $(compiler) -dumpmachine)
@@ -24,7 +24,7 @@ objects := test
 
 all: $(objects)
 
-%.o: src/%.c
+%.o: %.c
 	$(compiler) -c -o $@ $(cflags) $<
 
 test: test.o; $(compiler) -o $@ $^ $(ldflags)
