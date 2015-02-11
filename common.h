@@ -14,7 +14,9 @@
 #include <string.h>
 
 /* define from fcntl.h */
-#define O_RDONLY  0x00000000
+#define O_RDONLY 00000000
+#define O_RDWR 00000002
+
 
 /* ioctl used by the Mali blob */
 #define IOCTL_GET_FB_DMA_BUF _IOWR('m', 0xF9, __u32)

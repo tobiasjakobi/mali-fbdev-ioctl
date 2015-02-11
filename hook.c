@@ -55,7 +55,7 @@ int open(const char *pathname, int flags, mode_t mode) {
 
   if (strcmp(pathname, fbdev_name) == 0) {
     fprintf(stderr, "open called (pathname = %s)\n", pathname);
-    fbdev_fd = fptr(fake_fbdev, O_RDONLY, 0);
+    fbdev_fd = fptr(fake_fbdev, O_RDWR, 0);
     fprintf(stderr, "fake fbdev fd = %d\n", fbdev_fd);
     fd = fbdev_fd;
   } else {
