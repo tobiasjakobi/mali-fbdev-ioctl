@@ -41,27 +41,27 @@ static int emulate_get_var_screeninfo(void *ptr) {
 
 static int emulate_put_var_screeninfo(void *ptr) {
   // TODO: implement
-  return 0;
+  return -1;
 }
 
 static int emulate_get_fix_screeninfo(void *ptr) {
   // TODO: implement
-  return 0;
+  return -1;
 }
 
 static int emulate_pan_display(void *ptr) {
   // TODO: implement
-  return 0;
+  return -1;
 }
 
 static int emulate_waitforvsync(void *ptr) {
   // TODO: implement
-  return 0;
+  return -1;
 }
 
 static int emulate_get_fb_dma_buf(void *ptr) {
   // TODO: implement
-  return 0;
+  return -1;
 }
 
 int main(int argc, char* argv[])
