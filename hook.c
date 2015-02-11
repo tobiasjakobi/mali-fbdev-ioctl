@@ -1,6 +1,9 @@
 #include "common.h"
 
+#include "mali_ioctl.h"
+
 static int fbdev_fd = -1;
+static int mali_fd = -1;
 
 static callbackfnc get_var_screeninfo_cb = NULL;
 static callbackfnc put_var_screeninfo_cb = NULL;
@@ -8,6 +11,8 @@ static callbackfnc get_fix_screeninfo_cb = NULL;
 static callbackfnc pan_display_cb = NULL;
 static callbackfnc waitforvsync_cb = NULL;
 static callbackfnc get_fb_dma_buf_cb = NULL;
+
+static callbackfnc mali_mem_map_ext_cb = NULL;
 
 int setup_hook_callback(unsigned long req, callbackfnc cb) {
   int ret = 0;
@@ -37,6 +42,10 @@ int setup_hook_callback(unsigned long req, callbackfnc cb) {
       get_fb_dma_buf_cb = cb;
       break;
 
+    case MALI_IOC_MEM_MAP_EXT:
+      mali_mem_map_ext_cb = cb;
+      break;
+
     default:
       fprintf(stderr, "error: callback for unknown ioctl (0x%x)\n", (unsigned int)req);
       ret = -1;
@@ -54,10 +63,15 @@ int open(const char *pathname, int flags, mode_t mode) {
     fptr = (openfnc)dlsym(RTLD_NEXT, "open");
 
   if (strcmp(pathname, fbdev_name) == 0) {
-    fprintf(stderr, "open called (pathname = %s)\n", pathname);
+    fprintf(stderr, "open called (fbdev)\n");
     fbdev_fd = fptr(fake_fbdev, O_RDWR, 0);
     fprintf(stderr, "fake fbdev fd = %d\n", fbdev_fd);
     fd = fbdev_fd;
+  } else if (strcmp(pathname, mali_name) == 0) {
+    fprintf(stderr, "open called (mali)\n");
+    mali_fd = fptr(pathname, flags, mode);
+    fprintf(stderr, "mali fd = %d\n", mali_fd);
+    fd = mali_fd;
   } else {
     fd = fptr(pathname, flags, mode);
   }
@@ -74,6 +88,9 @@ int close(int fd) {
   if (fd == fbdev_fd) {
     fprintf(stderr, "close called on fake fbdev fd\n");
     fbdev_fd = -1;
+  } else if (fd == mali_fd) {
+    fprintf(stderr, "close called on mali fd\n");
+    mali_fd = -1;
   }
 
   return fptr(fd);
@@ -82,6 +99,7 @@ int close(int fd) {
 int ioctl(int fd, unsigned long request, ...) {
   static ioctlfnc fptr = NULL;
   int ret = -1;
+  callbackfnc cb;
 
   if (fptr == NULL)
     fptr = (ioctlfnc)dlsym(RTLD_NEXT, "ioctl");
@@ -92,40 +110,59 @@ int ioctl(int fd, unsigned long request, ...) {
   void *p = va_arg(args, void *);
   va_end(args);
 
-  if (fd > 0 && fd == fbdev_fd) {
+  if (fd == fbdev_fd) {
     switch (request) {
       case FBIOGET_VSCREENINFO:
-        if (get_var_screeninfo_cb)
-          ret = get_var_screeninfo_cb(p);
+        cb = get_var_screeninfo_cb;
         break;
 
       case FBIOPUT_VSCREENINFO:
-        if (put_var_screeninfo_cb)
-          ret = put_var_screeninfo_cb(p);
+        cb = put_var_screeninfo_cb;
         break;
 
       case FBIOGET_FSCREENINFO:
-        if (get_fix_screeninfo_cb)
-          ret = get_fix_screeninfo_cb(p);
+        cb = get_fix_screeninfo_cb;
         break;
 
       case FBIOPAN_DISPLAY:
-        if (pan_display_cb)
-          ret = pan_display_cb(p);
+        cb = pan_display_cb;
         break;
 
       case FBIO_WAITFORVSYNC:
-        if (waitforvsync_cb)
-          ret = waitforvsync_cb(p);
+        cb = waitforvsync_cb;
         break;
 
       case IOCTL_GET_FB_DMA_BUF:
-        if (get_fb_dma_buf_cb)
-          ret = get_fb_dma_buf_cb(p);
+        cb = get_fb_dma_buf_cb;
+        break;
 
       default:
-        fprintf(stderr, "error: unknown ioctl (0x%x) called\n", (unsigned int)request);
+        cb = NULL;
         break;
+    }
+
+    if (cb) {
+      ret = cb(p);
+    } else {
+      fprintf(stderr, "info: unknown fbdev ioctl (0x%x) called\n", (unsigned int)request);
+      ret = fptr(fd, request, p);
+    }
+  } else if (fd == mali_fd) {
+    switch (request) {
+      case MALI_IOC_MEM_MAP_EXT:
+        cb = mali_mem_map_ext_cb;
+        break;
+
+      default:
+        cb = NULL;
+        break;
+    }
+
+    if (cb) {
+      ret = cb(p);
+    } else {
+      fprintf(stderr, "info: unknown mali ioctl (0x%x) called\n", (unsigned int)request);
+      ret = fptr(fd, request, p);
     }
   } else {
     /* pass-through */
