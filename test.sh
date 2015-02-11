@@ -10,7 +10,7 @@ function ioctl_test {
       LD_PRELOAD=./dump.so LD_LIBRARY_PATH=$libmali ./test ;;
     "hook" )
       touch "/tmp/fake_fbdev"
-      LD_PRELOAD=./hook.so LD_LIBRARY_PATH$libmali ./test ;;
+      LD_PRELOAD=./hook.so LD_LIBRARY_PATH=$libmali ./test ;;
     * )
       LD_LIBRARY_PATH=$libmali ./test ;;
     esac
