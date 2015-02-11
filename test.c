@@ -31,6 +31,15 @@ static const struct fb_var_screeninfo fake_vscreeninfo = {
   .accel_flags = 1
 };
 
+static const struct fb_fix_screeninfo fake_fscreeninfo = {
+  .smem_start = 0x67900000,
+  .smem_len = 0, /* TODO */
+  .visual = FB_VISUAL_TRUECOLOR,
+  .xpanstep = 1,
+  .ypanstep = 1,
+  .line_length = 1280 * 4
+};
+
 static int emulate_get_var_screeninfo(void *ptr) {
   struct fb_var_screeninfo *data = ptr;
 
@@ -45,8 +54,11 @@ static int emulate_put_var_screeninfo(void *ptr) {
 }
 
 static int emulate_get_fix_screeninfo(void *ptr) {
-  // TODO: implement
-  return -1;
+  struct fb_fix_screeninfo *data = ptr;
+
+  memcpy(data, &fake_fscreeninfo, sizeof(struct fb_fix_screeninfo));
+
+  return 0;
 }
 
 static int emulate_pan_display(void *ptr) {
