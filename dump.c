@@ -2,16 +2,16 @@
 
 static int fbdev_fd = -1;
 
-void dump_u32(const void *ptr) {
+static void dump_u32(const void *ptr) {
   fprintf(stderr, "%lu\n", *((const unsigned long*)ptr));
 }
 
-void dump_fb_bitfield(const struct fb_bitfield *bf) {
+static void dump_fb_bitfield(const struct fb_bitfield *bf) {
   fprintf(stderr, "offset = %u, length = %u, msb_right = %u\n",
     bf->offset, bf->length, bf->msb_right);
 }
 
-void dump_var_screeninfo(const void *ptr) {
+static void dump_var_screeninfo(const void *ptr) {
   const struct fb_var_screeninfo *data = ptr;
 
   fprintf(stderr, "xres = %u, yres = %u\n", data->xres, data->yres);
@@ -48,7 +48,7 @@ void dump_var_screeninfo(const void *ptr) {
     data->reserved[1], data->reserved[2], data->reserved[3]);
 }
 
-void dump_fix_screeninfo(const void *ptr) {
+static void dump_fix_screeninfo(const void *ptr) {
   const struct fb_fix_screeninfo *data = ptr;
 
   fprintf(stderr, "id = %s\n", data->id);
