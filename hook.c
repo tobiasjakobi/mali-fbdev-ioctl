@@ -2,7 +2,7 @@
 
 static int fbdev_fd = -1;
 
-int emulate_get_var_screeninfo(void *ptr) {
+static int emulate_get_var_screeninfo(void *ptr) {
   struct fb_var_screeninfo *data = ptr;
 
   memset(data, 0, sizeof(struct fb_var_screeninfo));
