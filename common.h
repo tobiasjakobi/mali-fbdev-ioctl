@@ -33,6 +33,7 @@ struct fbdev_window {
 };
 
 static const char *fbdev_name = "/dev/fb0";
+static const char *mali_name = "/dev/mali";
 static const char *fake_fbdev = "/tmp/fake_fbdev";
 
 #endif /* _COMMON_H_ */

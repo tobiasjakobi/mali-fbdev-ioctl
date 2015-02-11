@@ -1,6 +1,9 @@
 #include "common.h"
 
+#include "mali_ioctl.h"
+
 static int fbdev_fd = -1;
+static int mali_fd = -1;
 
 static void dump_u32(const void *ptr) {
   fprintf(stderr, "%lu\n", *((const unsigned long*)ptr));
@@ -69,6 +72,107 @@ static void dump_fix_screeninfo(const void *ptr) {
   fprintf(stderr, "res = {%u, %u}\n", data->reserved[0], data->reserved[1]);
 }
 
+static void dump_uk_notification_type(_mali_uk_notification_type val) {
+  const char* msg;
+
+  switch (val) {
+    case _MALI_NOTIFICATION_CORE_SHUTDOWN_IN_PROGRESS:
+      msg = "core shutdown in progress";
+      break;
+    case _MALI_NOTIFICATION_APPLICATION_QUIT:
+      msg = "application quit";
+      break;
+    case _MALI_NOTIFICATION_SETTINGS_CHANGED:
+      msg = "settings changed";
+      break;
+    case _MALI_NOTIFICATION_SOFT_ACTIVATED:
+      msg = "soft activated";
+      break;
+    case _MALI_NOTIFICATION_PP_FINISHED:
+      msg = "pp finished";
+      break;
+    case _MALI_NOTIFICATION_PP_NUM_CORE_CHANGE:
+      msg = "pp num core change";
+      break;
+    case _MALI_NOTIFICATION_GP_FINISHED:
+      msg = "gp finished";
+      break;
+    case _MALI_NOTIFICATION_GP_STALLED:
+      msg = "gp stalled";
+      break;
+    default:
+      msg = "unknown";
+      break;
+  }
+
+  fprintf(stderr, "notification: %s\n", msg);
+}
+
+static void dump_mali_get_api_version(const void *ptr) {
+  const _mali_uk_get_api_version_s *data = ptr;
+
+  fprintf(stderr, "version = 0x%x, compatible = %d\n",
+    data->version, data->compatible);
+}
+
+static void dump_mali_wait_for_notification(const void *ptr) {
+  const _mali_uk_wait_for_notification_s *data = ptr;
+
+  dump_uk_notification_type(data->type);
+
+  switch (data->type) {
+    case _MALI_NOTIFICATION_GP_STALLED:
+      /* TODO: _mali_uk_gp_job_suspended_s gp_job_suspended */
+      break;
+    case _MALI_NOTIFICATION_GP_FINISHED:
+      /* TODO: _mali_uk_gp_job_finished_s  gp_job_finished */
+      break;
+    case _MALI_NOTIFICATION_PP_FINISHED:
+      /* TODO: _mali_uk_pp_job_finished_s  pp_job_finished */
+      break;
+    case _MALI_NOTIFICATION_SETTINGS_CHANGED:
+      /* TODO: _mali_uk_settings_changed_s setting_changed */
+      break;
+    case _MALI_NOTIFICATION_SOFT_ACTIVATED:
+      /* TODO: _mali_uk_soft_job_activated_s soft_job_activated */
+      break;
+    default:
+      break;
+  }
+}
+
+static void dump_mali_get_user_settings(const void *ptr) {
+  const _mali_uk_get_user_settings_s *data = ptr;
+  unsigned i;
+
+  for (i = 0; i < _MALI_UK_USER_SETTING_MAX; ++i) {
+    fprintf(stderr, "settings[%u] = %u\n", i, data->settings[i]);
+  }
+}
+
+static void dump_mali_mem_map_ext(const void *ptr) {
+  const _mali_uk_map_external_mem_s *data = ptr;
+
+  fprintf(stderr, "phys_addr = %u, size = %u\n",
+    data->phys_addr, data->size);
+  fprintf(stderr, "mali_address = %u, rights = %u\n",
+    data->mali_address, data->rights);
+  fprintf(stderr, "flags = %u, cookie = %u\n",
+    data->flags, data->cookie);
+}
+
+static void dump_mali_post_notification(const void *ptr) {
+  const _mali_uk_post_notification_s *data = ptr;
+
+  dump_uk_notification_type(data->type);
+}
+
+static void dump_mali_pp_core_version_get(const void *ptr) {
+  const _mali_uk_get_pp_core_version_s *data = ptr;
+
+  fprintf(stderr, "version = 0x%x\n", data->version);
+}
+
 int open(const char *pathname, int flags, mode_t mode) {
   static openfnc fptr = NULL;
   int fd;
@@ -79,8 +183,11 @@ int open(const char *pathname, int flags, mode_t mode) {
   fd = fptr(pathname, flags, mode);
 
   if (strcmp(pathname, fbdev_name) == 0) {
-    fprintf(stderr, "open called (pathname = %s) = %d\n", pathname, fd);
+    fprintf(stderr, "open called (fbdev) = %d\n", fd);
     fbdev_fd = fd;
+  } else if (strcmp(pathname, mali_name) == 0) {
+    fprintf(stderr, "open called (mali) = %d\n", fd);
+    mali_fd = fd;
   }
 
   return fd;
@@ -94,10 +201,13 @@ int close(int fd) {
     fptr = (closefnc)dlsym(RTLD_NEXT, "close");
 
   ret = fptr(fd);
-  
+
   if (fd == fbdev_fd) {
     fprintf(stderr, "close called on fbdev fd = %d\n", ret);
     fbdev_fd = -1;
+  } else if (fd == mali_fd) {
+    fprintf(stderr, "close called on mali fd = %d\n", ret);
+    mali_fd = -1;
   }
 
   return ret;
@@ -116,7 +226,7 @@ int ioctl(int fd, unsigned long request, ...) {
   void *p = va_arg(args, void *);
   va_end(args);
 
-  if (fd > 0 && fd == fbdev_fd) {
+  if (fd == fbdev_fd) {
     switch (request) {
       case FBIOGET_VSCREENINFO:
         fprintf(stderr, "FBIOGET_VSCREENINFO called\n");
@@ -155,7 +265,49 @@ int ioctl(int fd, unsigned long request, ...) {
         break;
 
       default:
-        fprintf(stderr, "unknown ioctl (0x%x) called\n", (unsigned int)request);
+        fprintf(stderr, "unknown fbdev ioctl (0x%x) called\n", (unsigned int)request);
+        break;
+    }
+  } else if (fd == mali_fd) {
+    switch (request) {
+      case MALI_IOC_GET_API_VERSION:
+        fprintf(stderr, "MALI_IOC_GET_API_VERSION called\n");
+        ret = fptr(fd, request, p);
+        dump_mali_get_api_version(p);
+        break;
+
+      case MALI_IOC_WAIT_FOR_NOTIFICATION:
+        fprintf(stderr, "MALI_IOC_WAIT_FOR_NOTIFICATION called\n");
+        ret = fptr(fd, request, p);
+        dump_mali_wait_for_notification(p);
+        break;
+
+      case MALI_IOC_POST_NOTIFICATION:
+        fprintf(stderr, "MALI_IOC_POST_NOTIFICATION called\n");
+        dump_mali_post_notification(p);
+        ret = fptr(fd, request, p);
+        break;
+
+      case MALI_IOC_GET_USER_SETTINGS:
+        fprintf(stderr, "MALI_IOC_GET_USER_SETTINGS called\n");
+        ret = fptr(fd, request, p);
+        dump_mali_get_user_settings(p);
+        break;
+
+      case MALI_IOC_PP_CORE_VERSION_GET:
+        fprintf(stderr, "MALI_IOC_PP_CORE_VERSION_GET called\n");
+        ret = fptr(fd, request, p);
+        dump_mali_pp_core_version_get(p);
+      break;
+
+      case MALI_IOC_MEM_MAP_EXT:
+        fprintf(stderr, "MALI_IOC_MEM_MAP_EXT called\n");
+        dump_mali_mem_map_ext(p);
+        ret = fptr(fd, request, p);
+        break;
+
+      default:
+        fprintf(stderr, "unknown mali ioctl (0x%x) called\n", (unsigned int)request);
         break;
     }
   } else {
