@@ -54,12 +54,16 @@ static const struct fb_fix_screeninfo fake_fscreeninfo = {
 static int emulate_get_var_screeninfo(void *ptr) {
   struct fb_var_screeninfo *data = ptr;
 
+  fprintf(stderr, "info: emulate_get_var_screeninfo called\n");
+
   memcpy(data, &fake_vscreeninfo, sizeof(struct fb_var_screeninfo));
 
   return 0;
 }
 
 static int emulate_put_var_screeninfo(void *ptr) {
+  fprintf(stderr, "info: emulate_put_var_screeninfo called\n");
+
   // TODO: implement
   return -1;
 }
@@ -67,22 +71,30 @@ static int emulate_put_var_screeninfo(void *ptr) {
 static int emulate_get_fix_screeninfo(void *ptr) {
   struct fb_fix_screeninfo *data = ptr;
 
+  fprintf(stderr, "info: emulate_get_fix_screeninfo called\n");
+
   memcpy(data, &fake_fscreeninfo, sizeof(struct fb_fix_screeninfo));
 
   return 0;
 }
 
 static int emulate_pan_display(void *ptr) {
+  fprintf(stderr, "info: emulate_pan_display called\n");
+
   // TODO: implement
   return -1;
 }
 
 static int emulate_waitforvsync(void *ptr) {
+  fprintf(stderr, "info: emulate_waitforvsync called\n");
+
   // TODO: implement
   return -1;
 }
 
 static int emulate_get_fb_dma_buf(void *ptr) {
+  fprintf(stderr, "info: emulate_get_fb_dma_buf called\n");
+
   // TODO: implement
   return -1;
 }
