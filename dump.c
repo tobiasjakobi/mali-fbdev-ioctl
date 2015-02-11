@@ -72,6 +72,17 @@ static void dump_fix_screeninfo(const void *ptr) {
   fprintf(stderr, "res = {%u, %u}\n", data->reserved[0], data->reserved[1]);
 }
 
+static void dump_get_vblank(const void *ptr) {
+  const struct fb_vblank *data = ptr;
+
+  fprintf(stderr, "flags = %u, count = %u\n",
+    data->flags, data->count);
+  fprintf(stderr, "vcount = %u, hcount = %u\n",
+    data->vcount, data->hcount);
+  fprintf(stderr, "reserved = {%u, %u, %u, %u}\n",
+    data->reserved[0], data->reserved[0], data->reserved[0], data->reserved[0]);
+}
+
 static void dump_uk_notification_type(_mali_uk_notification_type val) {
   const char* msg;
 
@@ -256,6 +267,12 @@ int ioctl(int fd, unsigned long request, ...) {
         fprintf(stderr, "FBIO_WAITFORVSYNC called\n");
         ret = fptr(fd, request, p);
         fprintf(stderr, "retval = "); dump_u32(p);
+        break;
+
+      case FBIOGET_VBLANK:
+        fprintf(stderr, "FBIOGET_VBLANK called\n");
+        ret = fptr(fd, request, p);
+        dump_get_vblank(p);
         break;
 
       case IOCTL_GET_FB_DMA_BUF:
