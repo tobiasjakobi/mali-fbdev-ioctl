@@ -3,6 +3,8 @@
 
 #include "common.h"
 
+#include "mali_ioctl.h"
+
 typedef int (*setupcbfnc)(unsigned long, callbackfnc);
 
 struct color3f {
@@ -99,6 +101,13 @@ static int emulate_get_fb_dma_buf(void *ptr) {
   return -1;
 }
 
+static int emulate_mali_mem_map_ext(void *ptr) {
+  fprintf(stderr, "info: emulate_mali_mem_map_ext called\n");
+
+  /* fake success */
+  return 0;
+}
+
 int main(int argc, char* argv[])
 {
   static setupcbfnc setup_hook_callback;
@@ -130,6 +139,8 @@ int main(int argc, char* argv[])
     setup_hook_callback(FBIOPAN_DISPLAY, emulate_pan_display);
     setup_hook_callback(FBIO_WAITFORVSYNC, emulate_waitforvsync);
     setup_hook_callback(IOCTL_GET_FB_DMA_BUF, emulate_get_fb_dma_buf);
+
+    setup_hook_callback(MALI_IOC_MEM_MAP_EXT, emulate_mali_mem_map_ext);
   }
 
   static const EGLint attribs[] = {
