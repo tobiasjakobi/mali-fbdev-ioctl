@@ -143,7 +143,7 @@ int ioctl(int fd, unsigned long request, ...) {
         break;
 
       case FBIO_WAITFORVSYNC:
-        fprintf(stderr, "FBIOPAN_DISPLAY called\n");
+        fprintf(stderr, "FBIO_WAITFORVSYNC called\n");
         ret = fptr(fd, request, p);
         fprintf(stderr, "retval = "); dump_u32(p);
         break;
