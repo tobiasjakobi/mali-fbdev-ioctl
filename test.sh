@@ -11,6 +11,9 @@ function ioctl_test {
     "hook" )
       touch "/tmp/fake_fbdev"
       LD_PRELOAD=./hook.so LD_LIBRARY_PATH=$libmali ./test ;;
+    "hooktrace" )
+      touch "/tmp/fake_fbdev"
+      LD_PRELOAD=./hook.so LD_LIBRARY_PATH=$libmali strace ./test 2> trace.out ;;
     * )
       LD_LIBRARY_PATH=$libmali ./test ;;
     esac
