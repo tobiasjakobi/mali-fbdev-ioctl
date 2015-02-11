@@ -144,24 +144,24 @@ int main(int argc, char* argv[])
 
   disp = eglGetDisplay(EGL_DEFAULT_DISPLAY);
   if (disp == EGL_NO_DISPLAY) {
-    printf("error: eglGetDisplay failed\n");
+    fprintf(stderr, "error: eglGetDisplay failed\n");
     return -2;
   }
 
   ret = eglInitialize(disp, &major, &minor);
   if (ret != EGL_TRUE) {
-    printf("error: eglInitialize failed\n");
+    fprintf(stderr, "error: eglInitialize failed\n");
     return -3;
   } else {
-    printf("info: eglInitialize: major = %d, minor = %d\n", major, minor);
+    fprintf(stderr, "info: eglInitialize: major = %d, minor = %d\n", major, minor);
   }
 
   ret = eglChooseConfig(disp, attribs, &conf, 1, &nconf);
   if (ret != EGL_TRUE) {
-    printf("error: eglChooseConfig failed\n");
+    fprintf(stderr, "error: eglChooseConfig failed\n");
     return -4;
   } else {
-    printf("info: configuration number = %d\n", nconf);
+    fprintf(stderr, "info: configuration number = %d\n", nconf);
   }
 
   nwin.width = 1280;
@@ -169,7 +169,7 @@ int main(int argc, char* argv[])
 
   surf = eglCreateWindowSurface(disp, conf, (NativeWindowType)&nwin, 0);
   if (surf == EGL_NO_SURFACE) {
-    printf("error: eglCreateWindowSurface failed\n");
+    fprintf(stderr, "error: eglCreateWindowSurface failed\n");
     return -5;
   }
 
@@ -180,23 +180,23 @@ int main(int argc, char* argv[])
 
   ctx = eglCreateContext(disp, conf, 0, ctxattribs);
   if (ctx == EGL_NO_CONTEXT) {
-    printf("error: eglCreateContext failed\n");
+    fprintf(stderr, "error: eglCreateContext failed\n");
     return -6;
   }
 
   ret = eglMakeCurrent(disp, surf, surf, ctx);
   if (ret != EGL_TRUE) {
-    printf("error: eglMakeCurrent failed\n");
+    fprintf(stderr, "error: eglMakeCurrent failed\n");
     return -7;
   }
 
   for (i = 0; i < 3; ++i) {
     glClearColor(testcolors[i].r, testcolors[i].g, testcolors[i].b, 1.0);
     glFlush();
-    printf("info: calling glClear\n");
+    fprintf(stderr, "info: calling glClear\n");
     glClear(GL_COLOR_BUFFER_BIT);
     glFlush();
-    printf("info: calling eglSwapBuffers\n");
+    fprintf(stderr, "info: calling eglSwapBuffers\n");
     eglSwapBuffers(disp, surf);
   }
 
