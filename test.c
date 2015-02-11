@@ -1,8 +1,19 @@
 #include <EGL/egl.h>
+#include <GLES2/gl2.h>
 
 #include "common.h"
 
 typedef int (*setupcbfnc)(unsigned long, callbackfnc);
+
+struct color3f {
+  float r, g, b;
+};
+
+static const struct color3f testcolors[3] = {
+  {1.0, 0.0, 0.0},
+  {0.0, 1.0, 0.0},
+  {0.0, 0.0, 1.0}
+};
 
 static const struct fb_var_screeninfo fake_vscreeninfo = {
   .xres = 1280,
@@ -84,12 +95,14 @@ int main(int argc, char* argv[])
   EGLDisplay disp;
   EGLContext ctx;
   EGLConfig conf;
+  EGLSurface surf;
 
-  //struct fbdev_window nwin;
+  struct fbdev_window nwin;
 
   EGLint major, minor;
   EGLint nconf;
   EGLBoolean ret;
+  unsigned int i;
 
   err = dlerror();
   setup_hook_callback = dlsym(RTLD_DEFAULT, "setup_hook_callback");
@@ -127,6 +140,8 @@ int main(int argc, char* argv[])
   if (ret != EGL_TRUE) {
     printf("error: eglInitialize failed\n");
     return -3;
+  } else {
+    printf("info: eglInitialize: major = %d, minor = %d\n", major, minor);
   }
 
   ret = eglChooseConfig(disp, attribs, &conf, 1, &nconf);
@@ -136,6 +151,44 @@ int main(int argc, char* argv[])
   } else {
     printf("info: configuration number = %d\n", nconf);
   }
+
+  nwin.width = 1280;
+  nwin.height = 720;
+
+  surf = eglCreateWindowSurface(disp, conf, (NativeWindowType)&nwin, 0);
+  if (surf == EGL_NO_SURFACE) {
+    printf("error: eglCreateWindowSurface failed\n");
+    return -5;
+  }
+
+  static const EGLint ctxattribs[] = {
+    EGL_CONTEXT_CLIENT_VERSION, 2,
+    EGL_NONE
+  };
+
+  ctx = eglCreateContext(disp, conf, 0, ctxattribs);
+  if (ctx == EGL_NO_CONTEXT) {
+    printf("error: eglCreateContext failed\n");
+    return -6;
+  }
+
+  ret = eglMakeCurrent(disp, surf, surf, ctx);
+  if (ret != EGL_TRUE) {
+    printf("error: eglMakeCurrent failed\n");
+    return -7;
+  }
+
+  for (i = 0; i < 3; ++i) {
+    glClearColor(testcolors[i].r, testcolors[i].g, testcolors[i].b, 1.0);
+    glFlush();
+    printf("info: calling glClear\n");
+    glClear(GL_COLOR_BUFFER_BIT);
+    glFlush();
+    printf("info: calling eglSwapBuffers\n");
+    eglSwapBuffers(disp, surf);
+  }
+
+  // TODO: deinitialization
 
   return 0;
 }

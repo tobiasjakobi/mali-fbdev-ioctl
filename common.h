@@ -25,6 +25,11 @@ typedef int (*ioctlfnc)(int, unsigned long, ...);
 
 typedef int (*callbackfnc)(void*);
 
+struct fbdev_window {
+  unsigned short width;
+  unsigned short height;
+};
+
 static const char *fbdev_name = "/dev/fb0";
 static const char *fake_fbdev = "/tmp/fake_fbdev";
 
