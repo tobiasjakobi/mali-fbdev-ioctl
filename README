@@ -5,3 +5,16 @@ dump: acts as a preloader and dumps ioctl calls made by the Mali blob
 hook: preloader that overrides ioctls calls made by the blob
 
 The idea is to extend 'hook' such that it translates all calls to the fbdev layer (which are emulated) to calls to the DRM layer.
+
+
+Interesting observations:
+The blob extracts information from both fb_{var,fix}_screeninfo structures. {x,y}res and {x,y}res_virtual are used to determine if the screen is considered 'compatible' at all. If the virtual yres is not twice yres, then 'eglCreateWindowSurface' fails (but 'eglInitialize' suceeds confusingly).
+
+The blob only does double-buffering. Even if the virtual yres is large enough to have three buffers, it only uses double-buffering.
+
+The proprietary GET_FB_DMA_BUF ioctl, which is defined in the Hardkernel vendor kernel, is not used by the blob at all. The blob still uses the MEM_{MAP,UNMAP}_EXT ioctls to map external memory into the Mali accelerator's address space. In this configuration there are two MEM_MAP_EXT (during 'eglInitialize') and two MEM_UNMAP_EXT calls (during 'eglTerminate') done.
+
+Even though the blob mainly uses MEM_{MAP,UNMAP}_EXT to setup memory mappings, it also mmaps the entire framebuffer area in 'eglInitialize' and clears it via memset. The unmap is done in 'eglTerminate'.
+
+'eglSwapBuffers' doesn't immediately trigger a page flip, sometimes there can be quite a delay. Page flipping is done via the PAN_DISPLAY ioctl. The blob doesn't use WAITFORVSYNC, so tearing is always present.
+
