@@ -140,6 +140,16 @@ static int emulate_mali_mem_map_ext(void *ptr) {
   }
 }
 
+static int emulate_mali_mem_unmap_ext(void *ptr) {
+#ifdef HOOK_VERBOSE
+  fprintf(stderr, "info: emulate_mali_mem_unmap_ext called\n");
+  fprintf(stderr, "info: translating to dma-buf release\n");
+#endif
+
+  /* data structures are compatible */
+  return hook.ioctl(hook.mali_fd, MALI_IOC_MEM_RELEASE_DMA_BUF, ptr);
+}
+
 int open(const char *pathname, int flags, mode_t mode) {
   int fd;
 
@@ -243,6 +253,10 @@ int ioctl(int fd, unsigned long request, ...) {
     switch (request) {
       case MALI_IOC_MEM_MAP_EXT:
         ret = emulate_mali_mem_map_ext(p);
+        break;
+
+      case MALI_IOC_MEM_UNMAP_EXT:
+        ret = emulate_mali_mem_unmap_ext(p);
         break;
 
       default:
