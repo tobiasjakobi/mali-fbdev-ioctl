@@ -301,6 +301,8 @@ int main(int argc, char* argv[])
     return -7;
   }
 
+  eglSwapInterval(disp, 1);
+
   for (i = 0; i < 3; ++i) {
     glClearColor(testcolors[i].r, testcolors[i].g, testcolors[i].b, 1.0);
     glFlush();
@@ -310,6 +312,11 @@ int main(int argc, char* argv[])
     fprintf(stderr, "info: calling eglSwapBuffers\n");
     eglSwapBuffers(disp, surf);
   }
+
+  eglMakeCurrent(disp, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
+  eglDestroyContext(disp, ctx);
+  eglDestroySurface(disp, surf);
+  eglTerminate(disp);
 
   return 0;
 }
