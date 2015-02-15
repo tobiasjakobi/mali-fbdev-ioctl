@@ -1,14 +1,25 @@
+#include <EGL/eglplatform_fb.h>
 #include <EGL/egl.h>
 #include <GLES2/gl2.h>
 
 #include "common.h"
 
+#include <stdlib.h>
+#include <exynos_drmif.h>
+#include <pthread.h>
+
 #include "mali_ioctl.h"
 
-typedef int (*setupcbfnc)(unsigned long, callbackfnc);
+typedef void (*setupcbfnc)(hsetupfnc, hsetupfnc);
 
 struct color3f {
   float r, g, b;
+};
+
+struct video_config {
+  unsigned width;
+  unsigned height;
+  unsigned num_buffers;
 };
 
 static const struct color3f testcolors[3] = {
@@ -17,94 +28,190 @@ static const struct color3f testcolors[3] = {
   {0.0, 0.0, 1.0}
 };
 
-static const struct fb_var_screeninfo fake_vscreeninfo = {
-  .xres = 1280,
-  .yres = 720,
-  .xres_virtual = 1280,
-  .yres_virtual = 720 * 3,
-  .bits_per_pixel = 32,
-  .red = {
-    .offset = 16,
-    .length = 8
-  },
-  .green = {
-    .offset = 8,
-    .length = 8
-  },
-  .blue = {
-    .offset = 0,
-    .length = 8
-  },
-  .transp = {
-    .offset = 0,
-    .length = 0
-  },
-  .height = 0xffffffff,
-  .width = 0xffffffff,
-  .accel_flags = 1
+static const struct video_config vconf = {
+  .width = 1280,
+  .height = 720,
+  .num_buffers = 3
 };
 
-static const struct fb_fix_screeninfo fake_fscreeninfo = {
-  .smem_start = 0x67900000,
-  .smem_len = 0, /* TODO */
-  .visual = FB_VISUAL_TRUECOLOR,
-  .xpanstep = 1,
-  .ypanstep = 1,
-  .line_length = 1280 * 4
-};
+static pthread_mutex_t hook_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-static int emulate_get_var_screeninfo(void *ptr) {
-  struct fb_var_screeninfo *data = ptr;
+static void init_var_screeninfo(struct hook_data *data) {
+  if (data->fake_vscreeninfo) return;
 
-  fprintf(stderr, "info: emulate_get_var_screeninfo called\n");
+  const struct fb_var_screeninfo vscreeninfo = {
+    .xres = data->width,
+    .yres = data->height,
+    .xres_virtual = data->width,
+    .yres_virtual = data->height * data->num_buffers,
+    .bits_per_pixel = 32,
+    .red = {
+      .offset = 16,
+      .length = 8
+    },
+    .green = {
+      .offset = 8,
+      .length = 8
+    },
+    .blue = {
+      .offset = 0,
+      .length = 8
+    },
+    .transp = {
+      .offset = 0,
+      .length = 0
+    },
+    .height = 0xffffffff,
+    .width = 0xffffffff,
+    .accel_flags = 1
+  };
 
-  memcpy(data, &fake_vscreeninfo, sizeof(struct fb_var_screeninfo));
-
-  return 0;
+  data->fake_vscreeninfo = malloc(sizeof(struct fb_var_screeninfo));
+  memcpy(data->fake_vscreeninfo, &vscreeninfo, sizeof(struct fb_var_screeninfo));
 }
 
-static int emulate_put_var_screeninfo(void *ptr) {
-  fprintf(stderr, "info: emulate_put_var_screeninfo called\n");
+static void init_fix_screeninfo(struct hook_data *data) {
+  if (data->fake_fscreeninfo) return;
 
-  // TODO: implement
-  return -1;
+  const struct fb_fix_screeninfo fscreeninfo = {
+    .smem_start = data->base_addr,
+    .smem_len = 0,
+    .visual = FB_VISUAL_TRUECOLOR,
+    .xpanstep = 1,
+    .ypanstep = 1,
+    .line_length = data->width * 4
+  };
+
+  data->fake_fscreeninfo = malloc(sizeof(struct fb_fix_screeninfo));
+  memcpy(data->fake_fscreeninfo, &fscreeninfo, sizeof(struct fb_fix_screeninfo));
 }
 
-static int emulate_get_fix_screeninfo(void *ptr) {
-  struct fb_fix_screeninfo *data = ptr;
+static int hook_initialize(struct hook_data *data) {
+  int fd, ret;
+  struct exynos_device *dev;
+  struct exynos_bo *bo;
+  struct drm_prime_handle req;
 
-  fprintf(stderr, "info: emulate_get_fix_screeninfo called\n");
+  unsigned i;
 
-  memcpy(data, &fake_fscreeninfo, sizeof(struct fb_fix_screeninfo));
+  pthread_mutex_lock(&hook_mutex);
 
-  return 0;
+  if (data->initialized) return 0;
+
+  fd = data->open("/dev/dri/card0", O_RDWR, 0);
+  if (fd < 0) {
+    fprintf(stderr, "[hook_initialize] error: failed to open DRM device\n");
+
+    ret = -1;
+    goto out;
+  }
+
+  dev = exynos_device_create(fd);
+
+  data->bos = malloc(sizeof(struct exynos_bo*) * vconf.num_buffers);
+  data->bo_fds = malloc(sizeof(int) * vconf.num_buffers);
+
+  for (i = 0; i < vconf.num_buffers; ++i) {
+    data->bos[i] = NULL;
+    data->bo_fds[i] = -1;
+
+    bo = exynos_bo_create(dev, vconf.width * vconf.height * 4, 0);
+
+    if (bo == NULL) {
+      fprintf(stderr, "[hook_initialize] error: failed to create buffer object (index = %u)\n", i);
+      break;
+    }
+
+    memset(&req, 0, sizeof(struct drm_prime_handle));
+    req.handle = bo->handle;
+
+    ret = drmIoctl(fd, DRM_IOCTL_PRIME_HANDLE_TO_FD, &req);
+    if (ret < 0) {
+      fprintf(stderr, "[hook_initialize] error: failed to get fd from bo\n");
+      break;
+    }
+
+    data->bos[i] = bo;
+    data->bo_fds[i] = req.fd;
+  }
+
+  if (i != vconf.num_buffers) {
+    while (i-- > 0)
+      exynos_bo_destroy(data->bos[i]);
+
+    free(data->bos);
+    free(data->bo_fds);
+
+    data->bos = NULL;
+    data->bo_fds = NULL;
+
+    exynos_device_destroy(dev);
+    close(fd);
+
+    ret = -1;
+    goto out;
+  }
+
+  data->drm_fd = fd;
+  data->width = vconf.width;
+  data->height = vconf.height;
+  data->num_buffers = vconf.num_buffers;
+  data->base_addr = 0x67900000;
+  data->edev = dev;
+
+  init_var_screeninfo(data);
+  init_fix_screeninfo(data);
+
+  data->size = vconf.width * vconf.height * 4;
+
+  data->initialized = 1;
+  ret = 0;
+
+out:
+  pthread_mutex_unlock(&hook_mutex);
+
+  return ret;
 }
 
-static int emulate_pan_display(void *ptr) {
-  fprintf(stderr, "info: emulate_pan_display called\n");
+static int hook_free(struct hook_data *data) {
+  unsigned i;
 
-  // TODO: implement
-  return -1;
-}
+  pthread_mutex_lock(&hook_mutex);
 
-static int emulate_waitforvsync(void *ptr) {
-  fprintf(stderr, "info: emulate_waitforvsync called\n");
+  if (data->initialized == 0)
+    return 0;
 
-  // TODO: implement
-  return -1;
-}
+  free(data->fake_vscreeninfo);
+  free(data->fake_fscreeninfo);
 
-static int emulate_get_fb_dma_buf(void *ptr) {
-  fprintf(stderr, "info: emulate_get_fb_dma_buf called\n");
+  data->fake_vscreeninfo = NULL;
+  data->fake_fscreeninfo = NULL;
+  data->size = 0;
 
-  // TODO: implement
-  return -1;
-}
+  for (i = 0; i < vconf.num_buffers; ++i)
+    exynos_bo_destroy(data->bos[i]);
 
-static int emulate_mali_mem_map_ext(void *ptr) {
-  fprintf(stderr, "info: emulate_mali_mem_map_ext called\n");
+  free(data->bos);
+  free(data->bo_fds);
 
-  /* fake success */
+  data->bos = NULL;
+  data->bo_fds = NULL;
+
+  exynos_device_destroy(data->edev);
+  close(data->drm_fd);
+
+  data->edev = NULL;
+  data->drm_fd = -1;
+
+  data->width = 0;
+  data->height = 0;
+  data->num_buffers = 0;
+  data->base_addr = 0;
+
+  data->initialized = 0;
+
+  pthread_mutex_unlock(&hook_mutex);
+
   return 0;
 }
 
@@ -118,7 +225,7 @@ int main(int argc, char* argv[])
   EGLConfig conf;
   EGLSurface surf;
 
-  struct fbdev_window nwin;
+  struct mali_native_window nwin;
 
   EGLint major, minor;
   EGLint nconf;
@@ -133,14 +240,7 @@ int main(int argc, char* argv[])
     fprintf(stderr, "dlsym(setup_hook_callback) failed\n");
     fprintf(stderr, "dlerror = %s\n", err);
   } else {
-    setup_hook_callback(FBIOGET_VSCREENINFO, emulate_get_var_screeninfo);
-    setup_hook_callback(FBIOPUT_VSCREENINFO, emulate_put_var_screeninfo);
-    setup_hook_callback(FBIOGET_FSCREENINFO, emulate_get_fix_screeninfo);
-    setup_hook_callback(FBIOPAN_DISPLAY, emulate_pan_display);
-    setup_hook_callback(FBIO_WAITFORVSYNC, emulate_waitforvsync);
-    setup_hook_callback(IOCTL_GET_FB_DMA_BUF, emulate_get_fb_dma_buf);
-
-    setup_hook_callback(MALI_IOC_MEM_MAP_EXT, emulate_mali_mem_map_ext);
+    setup_hook_callback(hook_initialize, hook_free);
   }
 
   static const EGLint attribs[] = {
@@ -175,10 +275,10 @@ int main(int argc, char* argv[])
     fprintf(stderr, "info: configuration number = %d\n", nconf);
   }
 
-  nwin.width = 1280;
-  nwin.height = 720;
+  nwin.width = vconf.width;
+  nwin.height = vconf.height;
 
-  surf = eglCreateWindowSurface(disp, conf, (NativeWindowType)&nwin, 0);
+  surf = eglCreateWindowSurface(disp, conf, &nwin, NULL);
   if (surf == EGL_NO_SURFACE) {
     fprintf(stderr, "error: eglCreateWindowSurface failed\n");
     return -5;
@@ -210,8 +310,6 @@ int main(int argc, char* argv[])
     fprintf(stderr, "info: calling eglSwapBuffers\n");
     eglSwapBuffers(disp, surf);
   }
-
-  // TODO: deinitialization
 
   return 0;
 }

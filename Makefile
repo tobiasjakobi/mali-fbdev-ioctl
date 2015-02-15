@@ -1,7 +1,7 @@
 optflags := -O2 -march=armv7-a -mcpu=cortex-a9 -mfpu=neon -mfloat-abi=hard
 compiler := gcc
-cflags   := -D_GNU_SOURCE
-ldflags  := -L$(HOME)/local/lib/mali-r4p0-fbdev -lMali -ldl
+cflags   := -D_GNU_SOURCE -I/usr/include/libdrm -I/usr/include/exynos
+ldflags  := -L$(HOME)/local/lib/mali-r4p0-fbdev -lMali -ldl -ldrm_exynos -ldrm
 
 ifndef platform
 platform := $(shell $(compiler) -dumpmachine)

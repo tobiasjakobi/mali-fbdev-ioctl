@@ -14,8 +14,8 @@
 #include <string.h>
 
 /* define from fcntl.h */
-#define O_RDONLY 00000000
-#define O_RDWR 00000002
+#define O_RDONLY  00000000
+#define O_RDWR    00000002
 
 
 /* ioctl used by the Mali blob */
@@ -24,16 +24,40 @@
 typedef int (*openfnc)(const char*, int, mode_t);
 typedef int (*closefnc)(int);
 typedef int (*ioctlfnc)(int, unsigned long, ...);
+typedef int (*mmapfnc)(void*, size_t, int, int, int, off_t);
+typedef int (*munmapfnc)(void*, size_t);
 
-typedef int (*callbackfnc)(void*);
+struct hook_data {
+  int fbdev_fd;
+  int mali_fd;
+  int drm_fd;
 
-struct fbdev_window {
-  unsigned short width;
-  unsigned short height;
+  /* hooked system calls */
+  openfnc open;
+  closefnc close;
+  ioctlfnc ioctl;
+  mmapfnc mmap;
+  munmapfnc munmap;
+
+  unsigned width;
+  unsigned height;
+  unsigned num_buffers;
+  unsigned long base_addr;
+  unsigned initialized;
+
+  struct fb_var_screeninfo *fake_vscreeninfo;
+  struct fb_fix_screeninfo *fake_fscreeninfo;
+  unsigned long size;
+
+  struct exynos_device *edev;
+  struct exynos_bo **bos;
+  int *bo_fds;
 };
+
+typedef int (*hsetupfnc)(struct hook_data*);
 
 static const char *fbdev_name = "/dev/fb0";
 static const char *mali_name = "/dev/mali";
-static const char *fake_fbdev = "/tmp/fake_fbdev";
+static const char *fake_fbdev = "/dev/shm/fake_fbdev";
 
 #endif /* _COMMON_H_ */

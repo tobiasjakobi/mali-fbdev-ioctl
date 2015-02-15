@@ -9,10 +9,10 @@ function ioctl_test {
     "dump" )
       LD_PRELOAD=./dump.so LD_LIBRARY_PATH=$libmali ./test ;;
     "hook" )
-      touch "/tmp/fake_fbdev"
+      touch "/dev/shm/fake_fbdev"
       LD_PRELOAD=./hook.so LD_LIBRARY_PATH=$libmali ./test ;;
     "hooktrace" )
-      touch "/tmp/fake_fbdev"
+      touch "/dev/shm/fake_fbdev"
       LD_PRELOAD=./hook.so LD_LIBRARY_PATH=$libmali strace ./test 2> trace.out ;;
     * )
       LD_LIBRARY_PATH=$libmali ./test ;;
