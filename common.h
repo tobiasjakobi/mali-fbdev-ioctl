@@ -17,6 +17,10 @@
 #define O_RDONLY  00000000
 #define O_RDWR    00000002
 
+/* mmap defines */
+#define PROT_WRITE 0x2
+#define MAP_SHARED 0x01
+
 
 /* ioctl used by the Mali blob */
 #define IOCTL_GET_FB_DMA_BUF _IOWR('m', 0xF9, __u32)
@@ -24,7 +28,7 @@
 typedef int (*openfnc)(const char*, int, mode_t);
 typedef int (*closefnc)(int);
 typedef int (*ioctlfnc)(int, unsigned long, ...);
-typedef int (*mmapfnc)(void*, size_t, int, int, int, off_t);
+typedef void* (*mmapfnc)(void*, size_t, int, int, int, off_t);
 typedef int (*munmapfnc)(void*, size_t);
 
 struct hook_data {
@@ -44,6 +48,8 @@ struct hook_data {
   unsigned num_buffers;
   unsigned long base_addr;
   unsigned initialized;
+
+  void *fake_mmap;
 
   struct fb_var_screeninfo *fake_vscreeninfo;
   struct fb_fix_screeninfo *fake_fscreeninfo;

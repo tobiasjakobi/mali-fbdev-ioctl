@@ -22,6 +22,8 @@ static struct hook_data hook = {
   .base_addr = 0,
   .initialized = 0,
 
+  .fake_mmap = NULL,
+
   .fake_vscreeninfo = NULL,
   .fake_fscreeninfo = NULL,
   .size = 0,
@@ -204,6 +206,47 @@ int close(int fd) {
   }
 
   return hook.close(fd);
+}
+
+void *mmap(void *addr, size_t length, int prot,
+           int flags, int fd, off_t offset) {
+  if (hook.mmap == NULL)
+    hook.mmap = (mmapfnc)dlsym(RTLD_NEXT, "mmap");
+
+  if (hook.fbdev_fd != -1 && fd == hook.fbdev_fd) {
+    fprintf(stderr, "mmap called on fake fbdev fd\n");
+
+    void *ret = NULL;
+
+    if (prot == PROT_WRITE && flags == MAP_SHARED) {
+      if (hook.fake_mmap == NULL)
+        hook.fake_mmap = malloc(length);
+
+      ret = hook.fake_mmap;
+    }
+
+    return ret;
+  } else {
+    /* pass-through */
+    return hook.mmap(addr, length, prot, flags, fd, offset);
+  }
+}
+
+int munmap(void *addr, size_t length) {
+  if (hook.munmap == NULL)
+    hook.munmap = (munmapfnc)dlsym(RTLD_NEXT, "munmap");
+
+  if (hook.fake_mmap != NULL && addr == hook.fake_mmap) {
+    fprintf(stderr, "munmap called on fake fbdev fd\n");
+
+    free(hook.fake_mmap);
+    hook.fake_mmap = NULL;
+
+    return 0;
+  } else {
+    /* pass-through */
+    return hook.munmap(addr, length);
+  }
 }
 
 int ioctl(int fd, unsigned long request, ...) {
