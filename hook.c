@@ -5,8 +5,6 @@
 
 #include "mali_ioctl.h"
 
-#define HOOK_VERBOSE 1
-
 static struct hook_data hook = {
   .fbdev_fd = -1,
   .mali_fd = -1,
@@ -37,7 +35,7 @@ static hsetupfnc hinit = NULL;
 static hsetupfnc hfree = NULL;
 
 void setup_hook_callback(hsetupfnc init, hsetupfnc free) {
-  #ifdef HOOK_VERBOSE
+#ifdef HOOK_VERBOSE
   fprintf(stderr, "info: setup_hook_callback called\n");
 #endif
 
@@ -151,7 +149,9 @@ int open(const char *pathname, int flags, mode_t mode) {
   if (strcmp(pathname, fbdev_name) == 0) {
     fprintf(stderr, "open called (fbdev)\n");
     hook.fbdev_fd = hook.open(fake_fbdev, O_RDWR, 0);
+#ifdef HOOK_VERBOSE
     fprintf(stderr, "fake fbdev fd = %d\n", hook.fbdev_fd);
+#endif
 
     if (hinit(&hook)) {
       fprintf(stderr, "error: hook initialization failed\n");
@@ -164,7 +164,9 @@ int open(const char *pathname, int flags, mode_t mode) {
   } else if (strcmp(pathname, mali_name) == 0) {
     fprintf(stderr, "open called (mali)\n");
     hook.mali_fd = hook.open(pathname, flags, mode);
+#ifdef HOOK_VERBOSE
     fprintf(stderr, "mali fd = %d\n", hook.mali_fd);
+#endif
     fd = hook.mali_fd;
   } else {
     fd = hook.open(pathname, flags, mode);
@@ -244,7 +246,9 @@ int ioctl(int fd, unsigned long request, ...) {
         break;
 
       default:
+#ifdef HOOK_VERBOSE
         fprintf(stderr, "info: unhooked mali ioctl (0x%x) called\n", (unsigned int)request);
+#endif
         ret = hook.ioctl(fd, request, p);
         break;
     }

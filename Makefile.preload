@@ -17,7 +17,7 @@ cflags += $(optflags) -DNDEBUG
 endif
 
 ifeq (debug,$(build))
-cflags += -O0 -g
+cflags += -O0 -g -DHOOK_VERBOSE=1
 endif
 
 objects := hook dump
