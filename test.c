@@ -23,9 +23,9 @@ struct video_config {
 };
 
 static const struct color3f testcolors[3] = {
-  {1.0, 0.0, 0.0},
-  {0.0, 1.0, 0.0},
-  {0.0, 0.0, 1.0}
+  {1.0, 0.5, 0.0},
+  {0.0, 1.0, 0.5},
+  {0.5, 0.0, 1.0}
 };
 
 static const struct video_config vconf = {
