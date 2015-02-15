@@ -31,7 +31,7 @@ static const struct color3f testcolors[3] = {
 static const struct video_config vconf = {
   .width = 1280,
   .height = 720,
-  .num_buffers = 3
+  .num_buffers = 2
 };
 
 static pthread_mutex_t hook_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -259,6 +259,7 @@ int main(int argc, char* argv[])
     return -2;
   }
 
+  fprintf(stderr, "info: calling eglInitialize\n");
   ret = eglInitialize(disp, &major, &minor);
   if (ret != EGL_TRUE) {
     fprintf(stderr, "error: eglInitialize failed\n");
@@ -278,6 +279,7 @@ int main(int argc, char* argv[])
   nwin.width = vconf.width;
   nwin.height = vconf.height;
 
+  fprintf(stderr, "info: calling eglCreateWindowSurface\n");
   surf = eglCreateWindowSurface(disp, conf, &nwin, NULL);
   if (surf == EGL_NO_SURFACE) {
     fprintf(stderr, "error: eglCreateWindowSurface failed\n");
@@ -314,8 +316,11 @@ int main(int argc, char* argv[])
   }
 
   eglMakeCurrent(disp, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
+  fprintf(stderr, "info: calling eglDestroyContext\n");
   eglDestroyContext(disp, ctx);
+  fprintf(stderr, "info: calling eglDestroySurface\n");
   eglDestroySurface(disp, surf);
+  fprintf(stderr, "info: calling eglTerminate\n");
   eglTerminate(disp);
 
   return 0;
