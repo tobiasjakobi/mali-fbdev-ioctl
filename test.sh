@@ -2,6 +2,7 @@
 
 function ioctl_test {
   local libmali="${HOME}/local/lib/mali-r4p0-fbdev"
+  local glmark="${HOME}/local/bin/glmark2-es2"
 
   case "${1}" in
     "trace" )
@@ -14,6 +15,9 @@ function ioctl_test {
     "hooktrace" )
       touch "/dev/shm/fake_fbdev"
       LD_PRELOAD=./hook.so LD_LIBRARY_PATH=$libmali strace ./test 2> trace.out ;;
+    "glmark" )
+      touch "/dev/shm/fake_fbdev"
+      LD_PRELOAD=./hook.so LD_LIBRARY_PATH=$libmali $glmark ;;
     * )
       LD_LIBRARY_PATH=$libmali ./test ;;
     esac
