@@ -20,20 +20,16 @@ ifeq (debug,$(build))
 cflags += -O0 -g -DHOOK_VERBOSE=1
 endif
 
-objects := hook dump
+objects := hook.so dump.so
 
 all: $(objects)
 
-hook:
-	$(compiler) $(cflags) -c hook.c
-	$(compiler) $(ldflags) -o hook.so hook.o -ldl
+%.o: %.c
+	$(compiler) $(cflags) -c -o $@ $<
 
-dump:
-	$(compiler) $(cflags) -fPIC -rdynamic -c dump.c
-	$(compiler) $(ldflags) -o dump.so dump.o -ldl
+%.so: %.o; $(compiler) $(ldflags) -o $@ $< -ldl
 
 clean:
-	rm -f *.o
 	rm -f $(objects)
 
 strip:
