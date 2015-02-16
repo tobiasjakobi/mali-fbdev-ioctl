@@ -7,11 +7,6 @@ ifndef platform
 platform := $(shell $(compiler) -dumpmachine)
 endif
 
-ifeq (release-lto,$(build))
-cflags += $(optflags) -flto=4 -fuse-linker-plugin -DNDEBUG
-ldflags += $(optflags) -flto=4 -fuse-linker-plugin
-endif
-
 ifeq (release,$(build))
 cflags += $(optflags) -DNDEBUG -DQUIET_NONIMPLEMENTED=1
 endif
