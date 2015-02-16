@@ -165,7 +165,7 @@ int open(const char *pathname, int flags, mode_t mode) {
     fprintf(stderr, "fake fbdev fd = %d\n", hook.fbdev_fd);
 #endif
 
-    if (hinit(&hook)) {
+    if (hinit && hinit(&hook)) {
       fprintf(stderr, "error: hook initialization failed\n");
       hook.close(hook.fbdev_fd);
       hook.fbdev_fd = -1;
@@ -194,7 +194,7 @@ int close(int fd) {
   if (fd == hook.fbdev_fd) {
     fprintf(stderr, "close called on fake fbdev fd\n");
 
-    if (hfree(&hook)) {
+    if (hfree && hfree(&hook)) {
       fprintf(stderr, "error: freeing hook failed\n");
       return -1;
     }
