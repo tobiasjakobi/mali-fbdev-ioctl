@@ -305,8 +305,10 @@ int main(int argc, char* argv[])
 
   eglSwapInterval(disp, 1);
 
-  for (i = 0; i < 3; ++i) {
-    glClearColor(testcolors[i].r, testcolors[i].g, testcolors[i].b, 1.0);
+  for (i = 0; i < 30; ++i) {
+    const unsigned cidx = i % 3;
+
+    glClearColor(testcolors[cidx].r, testcolors[cidx].g, testcolors[cidx].b, 1.0);
     glFlush();
     fprintf(stderr, "info: calling glClear\n");
     glClear(GL_COLOR_BUFFER_BIT);
