@@ -12,10 +12,12 @@
 
 /* Some envvars that the blob seems to use:
  * MALI_NOCLEAR
- * MALI_MAX_WINDOW_BUFFERS
- * MALI_FBDEV
- * MALI_SINGLEBUFFER
+ * MALI_MAX_WINDOW_BUFFERS (defaults seems to be 2)
+ * FRAMEBUFFER (fbdev device used by the blob, e.g. "/dev/fb1")
+ * MALI_FBDEV (read, but apparantly not used)
+ * MALI_SINGLEBUFFER (do all rendering in one buffer)
  * MALI_FLIP_PIXMAP
+ * MALI_NEVERBLIT
  */
 
 typedef void (*setupcbfnc)(hsetupfnc, hsetupfnc);
