@@ -60,6 +60,12 @@ struct hook_data {
   int *bo_fds;
 };
 
+struct video_config {
+  unsigned width;
+  unsigned height;
+  unsigned num_buffers;
+};
+
 typedef int (*hsetupfnc)(struct hook_data*);
 
 static const char *fbdev_name = "/dev/fb0";

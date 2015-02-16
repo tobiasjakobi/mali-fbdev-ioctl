@@ -27,7 +27,7 @@ all: $(objects)
 %.o: %.c
 	$(compiler) -c -o $@ $(cflags) $<
 
-test: test.o; $(compiler) -o $@ $^ $(ldflags)
+test: test.o setup.o; $(compiler) -o $@ $^ $(ldflags)
 
 clean:
 	rm -f *.o
