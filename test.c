@@ -10,6 +10,14 @@
 
 #include "mali_ioctl.h"
 
+/* Some envvars that the blob seems to use:
+ * MALI_NOCLEAR
+ * MALI_MAX_WINDOW_BUFFERS
+ * MALI_FBDEV
+ * MALI_SINGLEBUFFER
+ * MALI_FLIP_PIXMAP
+ */
+
 typedef void (*setupcbfnc)(hsetupfnc, hsetupfnc);
 
 struct color3f {
