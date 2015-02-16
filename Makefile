@@ -29,6 +29,8 @@ all: $(objects)
 
 test: test.o setup.o; $(compiler) -o $@ $^ $(ldflags)
 
+libioctlsetup: setup.o; ar rs libioctlsetup.a $^
+
 clean:
 	rm -f *.o
 	rm -f $(objects)
