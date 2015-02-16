@@ -13,7 +13,7 @@ ldflags += $(optflags) -flto=4 -fuse-linker-plugin
 endif
 
 ifeq (release,$(build))
-cflags += $(optflags) -DNDEBUG
+cflags += $(optflags) -DNDEBUG -DQUIET_NONIMPLEMENTED=1
 endif
 
 ifeq (debug,$(build))

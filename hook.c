@@ -59,7 +59,9 @@ static int emulate_get_var_screeninfo(void *ptr) {
 }
 
 static int emulate_put_var_screeninfo(void *ptr) {
+#ifndef QUIET_NONIMPLEMENTED
   fprintf(stderr, "info: emulate_put_var_screeninfo called\n");
+#endif
 
   /* TODO: implement */
   return -ENOTTY;
@@ -81,23 +83,29 @@ static int emulate_get_fix_screeninfo(void *ptr) {
 static int emulate_pan_display(void *ptr) {
   const struct fb_var_screeninfo *data = ptr;
 
+#ifndef QUIET_NONIMPLEMENTED
   fprintf(stderr, "info: emulate_pan_display called\n");
   fprintf(stderr, "info: xoffset = %u, yoffset = %u\n",
     data->xoffset, data->yoffset);
+#endif
 
   /* TODO: implement */
   return -ENOTTY;
 }
 
 static int emulate_waitforvsync(void *ptr) {
+#ifndef QUIET_NONIMPLEMENTED
   fprintf(stderr, "info: emulate_waitforvsync called\n");
+#endif
 
   /* TODO: implement */
   return -ENOTTY;
 }
 
 static int emulate_get_fb_dma_buf(void *ptr) {
+#ifndef QUIET_NONIMPLEMENTED
   fprintf(stderr, "info: emulate_get_fb_dma_buf called\n");
+#endif
 
   /* TODO: implement */
   return -ENOTTY;
