@@ -39,7 +39,7 @@ static const struct color3f testcolors[3] = {
 static const struct video_config vconf = {
   .width = 1280,
   .height = 720,
-  .num_buffers = 2
+  .num_buffers = 3
 };
 
 static pthread_mutex_t hook_mutex = PTHREAD_MUTEX_INITIALIZER;
