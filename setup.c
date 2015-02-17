@@ -1,6 +1,7 @@
 #include "common.h"
 
 #include <stdlib.h>
+#include <stdbool.h>
 
 #include <exynos_drmif.h>
 #include <pthread.h>
@@ -10,6 +11,35 @@ typedef void (*setupcbfnc)(hsetupfnc, hsetupfnc);
 static pthread_mutex_t hook_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 extern const struct video_config vconf;
+
+/* Find the index of a compatible DRM device. */
+static int get_device_index() {
+  char buf[32];
+  drmVersionPtr ver;
+
+  int index = 0;
+  int fd;
+  bool found = false;
+
+  while (!found) {
+    snprintf(buf, sizeof(buf), "/dev/dri/card%d", index);
+
+    fd = open(buf, O_RDWR);
+    if (fd == -1) break;
+
+    ver = drmGetVersion(fd);
+
+    if (strcmp("exynos", ver->name) == 0)
+      found = true;
+    else
+      ++index;
+
+    drmFreeVersion(ver);
+    close(fd);
+  }
+
+  return (found ? index : -1);
+}
 
 static void init_var_screeninfo(struct hook_data *data) {
   if (data->fake_vscreeninfo) return;
@@ -62,18 +92,29 @@ static void init_fix_screeninfo(struct hook_data *data) {
 }
 
 static int hook_initialize(struct hook_data *data) {
-  int fd, ret;
+  int fd, ret, devidx;
   struct exynos_device *dev;
   struct exynos_bo *bo;
   struct drm_prime_handle req;
 
   unsigned i;
+  char buf[32];
 
   pthread_mutex_lock(&hook_mutex);
 
   if (data->initialized) return 0;
 
-  fd = data->open("/dev/dri/card0", O_RDWR, 0);
+  devidx = get_device_index();
+  if (devidx != -1) {
+    snprintf(buf, sizeof(buf), "/dev/dri/card%d", devidx);
+  } else {
+    fprintf(stderr, "[hook_initialize] error: no compatible DRM device found\n");
+
+    ret = -1;
+    goto out;
+  }
+
+  fd = data->open(buf, O_RDWR, 0);
   if (fd < 0) {
     fprintf(stderr, "[hook_initialize] error: failed to open DRM device\n");
 
