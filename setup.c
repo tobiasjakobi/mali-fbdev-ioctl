@@ -354,7 +354,7 @@ static int hook_free(struct hook_data *data) {
 }
 
 void setup_hook() {
-  static setupcbfnc setup_hook_callback;
+  setupcbfnc setup_hook_callback;
   const char* err;
 
   err = dlerror();
