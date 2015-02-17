@@ -71,6 +71,7 @@ struct video_config {
   unsigned width;
   unsigned height;
   unsigned num_buffers;
+  unsigned use_screen;
 };
 
 typedef int (*hsetupfnc)(struct hook_data*);

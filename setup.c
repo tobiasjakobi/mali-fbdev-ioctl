@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <assert.h>
 
 #include <xf86drmMode.h>
 #include <drm_fourcc.h>
@@ -60,6 +61,118 @@ static int get_device_index() {
   }
 
   return (found ? index : -1);
+}
+
+static void clean_up_drm(struct exynos_drm *d, int fd) {
+  if (d->encoder) drmModeFreeEncoder(d->encoder);
+  if (d->connector) drmModeFreeConnector(d->connector);
+  if (d->resources) drmModeFreeResources(d->resources);
+
+  free(d);
+  close(fd);
+}
+
+static int exynos_open(struct hook_data *data) {
+  char buf[32];
+  int devidx;
+
+  int fd = -1;
+  struct exynos_drm *drm = NULL;
+  struct exynos_fliphandler *fliphandler = NULL;
+  unsigned i;
+
+  assert(data->drm_fd == -1);
+
+  devidx = get_device_index();
+  if (devidx != -1) {
+    snprintf(buf, sizeof(buf), "/dev/dri/card%d", devidx);
+  } else {
+    fprintf(stderr, "[exynos_open] error: no compatible DRM device found\n");
+    return -1;
+  }
+
+  fd = data->open(buf, O_RDWR, 0);
+  if (fd == -1) {
+    fprintf(stderr, "[exynos_open] error: failed to open DRM device\n");
+    return -1;
+  }
+
+  if (vconf.use_screen == 0) {
+    fprintf(stderr, "[exynos_open] info: skipping screen initialization\n");
+
+    data->drm_fd = fd;
+    return 0;
+  }
+
+  drm = calloc(1, sizeof(struct exynos_drm));
+  if (drm == NULL) {
+    fprintf(stderr, "[exynos_open] error: failed to allocate DRM\n");
+    close(fd);
+    return -1;
+  }
+
+  drm->resources = drmModeGetResources(fd);
+  if (drm->resources == NULL) {
+    fprintf(stderr, "[exynos_open] error: failed to get DRM resources\n");
+    goto fail;
+  }
+
+  for (i = 0; i < drm->resources->count_connectors; ++i) {
+    drm->connector = drmModeGetConnector(fd, drm->resources->connectors[i]);
+    if (drm->connector == NULL)
+      continue;
+
+    if (drm->connector->connection == DRM_MODE_CONNECTED &&
+        drm->connector->count_modes > 0)
+      break;
+
+    drmModeFreeConnector(drm->connector);
+    drm->connector = NULL;
+  }
+
+  if (i == drm->resources->count_connectors) {
+    fprintf(stderr, "[exynos_open] error: no currently active connector found\n");
+    goto fail;
+  }
+
+  for (i = 0; i < drm->resources->count_encoders; i++) {
+    drm->encoder = drmModeGetEncoder(fd, drm->resources->encoders[i]);
+
+    if (drm->encoder == NULL) continue;
+
+    if (drm->encoder->encoder_id == drm->connector->encoder_id)
+      break;
+
+    drmModeFreeEncoder(drm->encoder);
+    drm->encoder = NULL;
+  }
+
+  fliphandler = calloc(1, sizeof(struct exynos_fliphandler));
+  if (fliphandler == NULL) {
+    fprintf(stderr, "[exynos_open] error: failed to allocate fliphandler\n");
+    goto fail;
+  }
+
+  /* Setup the flip handler. */
+  fliphandler->fds.fd = fd;
+  fliphandler->fds.events = POLLIN;
+  fliphandler->evctx.version = DRM_EVENT_CONTEXT_VERSION;
+  fliphandler->evctx.page_flip_handler = NULL /* TODO: page_flip_handler */;
+
+  data->drm_fd = fd;
+  data->drm = drm;
+  data->fliphandler = fliphandler;
+
+  fprintf(stderr, "[exynos_open] info: using DRM device \"%s\" with connector id %u\n",
+          buf, data->drm->connector->connector_id);
+
+  return 0;
+
+fail:
+  free(fliphandler);
+  clean_up_drm(drm, fd);
+
+  return -1;
 }
 
 static void init_var_screeninfo(struct hook_data *data) {
@@ -125,24 +238,12 @@ static int hook_initialize(struct hook_data *data) {
 
   if (data->initialized) return 0;
 
-  devidx = get_device_index();
-  if (devidx != -1) {
-    snprintf(buf, sizeof(buf), "/dev/dri/card%d", devidx);
-  } else {
-    fprintf(stderr, "[hook_initialize] error: no compatible DRM device found\n");
-
+  if (exynos_open(data)) {
     ret = -1;
     goto out;
   }
 
-  fd = data->open(buf, O_RDWR, 0);
-  if (fd < 0) {
-    fprintf(stderr, "[hook_initialize] error: failed to open DRM device\n");
-
-    ret = -1;
-    goto out;
-  }
-
+  fd = data->drm_fd;
   dev = exynos_device_create(fd);
 
   data->bos = malloc(sizeof(struct exynos_bo*) * vconf.num_buffers);
