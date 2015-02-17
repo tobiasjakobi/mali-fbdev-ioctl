@@ -30,7 +30,10 @@ static struct hook_data hook = {
 
   .edev = NULL,
   .bos = NULL,
-  .bo_fds = NULL
+  .bo_fds = NULL,
+
+  .drm = NULL,
+  .fliphandler = NULL
 };
 
 static hsetupfnc hinit = NULL;

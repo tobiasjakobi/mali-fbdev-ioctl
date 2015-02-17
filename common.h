@@ -31,6 +31,10 @@ typedef int (*ioctlfnc)(int, unsigned long, ...);
 typedef void* (*mmapfnc)(void*, size_t, int, int, int, off_t);
 typedef int (*munmapfnc)(void*, size_t);
 
+/* forward declarations */
+struct exynos_fliphandler;
+struct exynos_drm;
+
 struct hook_data {
   int fbdev_fd;
   int mali_fd;
@@ -58,6 +62,9 @@ struct hook_data {
   struct exynos_device *edev;
   struct exynos_bo **bos;
   int *bo_fds;
+
+  struct exynos_drm *drm;
+  struct exynos_fliphandler *fliphandler;
 };
 
 struct video_config {

@@ -2,15 +2,36 @@
 
 #include <stdlib.h>
 #include <stdbool.h>
+#include <stdint.h>
 
+#include <xf86drmMode.h>
+#include <drm_fourcc.h>
 #include <exynos_drmif.h>
+
 #include <pthread.h>
+#include <poll.h>
 
 typedef void (*setupcbfnc)(hsetupfnc, hsetupfnc);
 
 static pthread_mutex_t hook_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 extern const struct video_config vconf;
+
+struct exynos_fliphandler {
+  struct pollfd fds;
+  drmEventContext evctx;
+};
+
+struct exynos_drm {
+  drmModeRes *resources;
+  drmModeConnector *connector;
+  drmModeEncoder *encoder;
+  drmModeModeInfo *mode;
+  drmModeCrtc *orig_crtc;
+
+  uint32_t crtc_id;
+  uint32_t connector_id;
+};
 
 /* Find the index of a compatible DRM device. */
 static int get_device_index() {
