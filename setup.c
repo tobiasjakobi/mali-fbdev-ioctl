@@ -12,7 +12,7 @@
 #include <pthread.h>
 #include <poll.h>
 
-typedef void (*setupcbfnc)(hsetupfnc, hsetupfnc);
+typedef void (*setupcbfnc)(hsetupfnc, hsetupfnc, hflipfnc);
 
 static pthread_mutex_t hook_mutex = PTHREAD_MUTEX_INITIALIZER;
 
@@ -353,6 +353,21 @@ static int hook_free(struct hook_data *data) {
   return 0;
 }
 
+static int hook_flip(struct hook_data *data, unsigned bufidx) {
+  pthread_mutex_lock(&hook_mutex);
+
+#ifndef NDEBUG
+  fprintf(stderr, "DEBUG: in hook_flip (bufidx = %u)\n", bufidx);
+#endif
+
+  /* TODO: implement */
+
+  pthread_mutex_unlock(&hook_mutex);
+
+  /* fake success */
+  return 0;
+}
+
 void setup_hook() {
   setupcbfnc setup_hook_callback;
   const char* err;
@@ -365,6 +380,6 @@ void setup_hook() {
     fprintf(stderr, "dlsym(setup_hook_callback) failed\n");
     fprintf(stderr, "dlerror = %s\n", err);
   } else {
-    setup_hook_callback(hook_initialize, hook_free);
+    setup_hook_callback(hook_initialize, hook_free, hook_flip);
   }
 }

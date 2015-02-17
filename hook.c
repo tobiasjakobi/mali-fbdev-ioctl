@@ -38,14 +38,16 @@ static struct hook_data hook = {
 
 static hsetupfnc hinit = NULL;
 static hsetupfnc hfree = NULL;
+static hflipfnc hflip = NULL;
 
-void setup_hook_callback(hsetupfnc init, hsetupfnc free) {
+void setup_hook_callback(hsetupfnc init_, hsetupfnc free_, hflipfnc flip_) {
 #ifdef HOOK_VERBOSE
   fprintf(stderr, "info: setup_hook_callback called\n");
 #endif
 
-  hinit = init;
-  hfree = free;
+  hinit = init_;
+  hfree = free_;
+  hflip = flip_;
 }
 
 static int emulate_get_var_screeninfo(void *ptr) {
@@ -85,15 +87,12 @@ static int emulate_get_fix_screeninfo(void *ptr) {
 
 static int emulate_pan_display(void *ptr) {
   const struct fb_var_screeninfo *data = ptr;
+  int ret = -ENOTTY;
 
-#ifndef QUIET_NONIMPLEMENTED
-  fprintf(stderr, "info: emulate_pan_display called\n");
-  fprintf(stderr, "info: xoffset = %u, yoffset = %u\n",
-    data->xoffset, data->yoffset);
-#endif
+  if (data->xoffset == 0 && ((data->yoffset % hook.height) == 0))
+    ret = hflip(&hook, data->yoffset / hook.height);
 
-  /* TODO: implement */
-  return -ENOTTY;
+  return ret;
 }
 
 static int emulate_waitforvsync(void *ptr) {

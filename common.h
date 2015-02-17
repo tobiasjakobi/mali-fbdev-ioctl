@@ -75,6 +75,7 @@ struct video_config {
 };
 
 typedef int (*hsetupfnc)(struct hook_data*);
+typedef int (*hflipfnc)(struct hook_data*, unsigned);
 
 static const char *fbdev_name = "/dev/fb0";
 static const char *mali_name = "/dev/mali";
