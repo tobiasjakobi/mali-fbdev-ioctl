@@ -37,6 +37,7 @@ struct exynos_fliphandler;
 struct exynos_drm;
 
 struct hook_data {
+  /* file descriptors */
   int fbdev_fd;
   int mali_fd;
   int drm_fd;
@@ -50,18 +51,17 @@ struct hook_data {
 
   unsigned width;
   unsigned height;
-  unsigned long base_addr;
-  unsigned initialized;
-
-  void *fake_mmap;
+  unsigned pitch;
+  unsigned bpp; /* bytes per pixel */
+  unsigned size; /* size of one page */
 
   struct fb_var_screeninfo *fake_vscreeninfo;
   struct fb_fix_screeninfo *fake_fscreeninfo;
-  unsigned pitch;
-  unsigned size;
-  unsigned bpp;
+  unsigned long base_addr;
+  void *fake_mmap;
+  unsigned initialized;
 
-  struct exynos_device *edev;
+  struct exynos_device *device;
   struct exynos_drm *drm;
   struct exynos_fliphandler *fliphandler;
 

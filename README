@@ -21,4 +21,3 @@ Even though the blob mainly uses MEM_{MAP,UNMAP}_EXT to setup memory mappings, i
 
 TODOs:
 - initial clear of buffers with G2D
-- reorder elements in struct hook_data

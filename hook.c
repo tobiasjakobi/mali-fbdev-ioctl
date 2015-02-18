@@ -18,18 +18,17 @@ static struct hook_data hook = {
 
   .width = 0,
   .height = 0,
-  .base_addr = 0,
-  .initialized = 0,
-
-  .fake_mmap = NULL,
+  .pitch = 0,
+  .bpp = 0,
+  .size = 0,
 
   .fake_vscreeninfo = NULL,
   .fake_fscreeninfo = NULL,
-  .pitch = 0,
-  .size = 0,
-  .bpp = 0,
+  .base_addr = 0,
+  .fake_mmap = NULL,
+  .initialized = 0,
 
-  .edev = NULL,
+  .device = NULL,
   .drm = NULL,
   .fliphandler = NULL,
 

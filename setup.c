@@ -377,7 +377,7 @@ static int exynos_alloc(struct hook_data *data) {
   }
 
   data->pages = pages;
-  data->edev = device;
+  data->device = device;
 
   if (vconf.use_screen == 1) {
     /* Setup CRTC: display the last allocated page. */
@@ -411,7 +411,7 @@ static void exynos_free(struct hook_data *data) {
   free(data->pages);
   data->pages = NULL;
 
-  exynos_device_destroy(data->edev);
+  exynos_device_destroy(data->device);
 }
 
 static void init_var_screeninfo(struct hook_data *data) {
