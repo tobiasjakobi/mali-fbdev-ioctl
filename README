@@ -18,3 +18,7 @@ Even though the blob mainly uses MEM_{MAP,UNMAP}_EXT to setup memory mappings, i
 
 'eglSwapBuffers' doesn't immediately trigger a page flip, sometimes there can be quite a delay. Page flipping is done via the PAN_DISPLAY ioctl. The blob doesn't use WAITFORVSYNC, so tearing is always present.
 
+
+TODOs:
+- initial clear of buffers with G2D
+- reorder elements in struct hook_data
