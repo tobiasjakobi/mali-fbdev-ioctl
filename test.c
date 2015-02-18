@@ -29,7 +29,8 @@ const struct video_config vconf = {
   .height = 720,
   .bpp = 4,
   .num_buffers = 3,
-  .use_screen = 0
+  .use_screen = 0,
+  .monitor_index = 0
 };
 
 extern void setup_hook();

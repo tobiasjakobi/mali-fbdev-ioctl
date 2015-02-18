@@ -159,6 +159,9 @@ static int exynos_open(struct hook_data *data) {
   }
 
   for (i = 0; i < drm->resources->count_connectors; ++i) {
+    if (vconf.monitor_index != 0 && vconf.monitor_index - 1 != i)
+      continue;
+
     drm->connector = drmModeGetConnector(fd, drm->resources->connectors[i]);
     if (drm->connector == NULL)
       continue;

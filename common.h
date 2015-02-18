@@ -77,6 +77,7 @@ struct video_config {
   unsigned bpp; /* bytes per pixel */
   unsigned num_buffers;
   unsigned use_screen;
+  unsigned monitor_index;
 };
 
 typedef int (*hsetupfnc)(struct hook_data*);
