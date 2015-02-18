@@ -26,7 +26,9 @@ static struct hook_data hook = {
 
   .fake_vscreeninfo = NULL,
   .fake_fscreeninfo = NULL,
+  .pitch = 0,
   .size = 0,
+  .bpp = 0,
 
   .edev = NULL,
   .bos = NULL,

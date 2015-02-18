@@ -63,6 +63,21 @@ static int get_device_index() {
   return (found ? index : -1);
 }
 
+/* Restore the original CRTC. */
+static void restore_crtc(struct exynos_drm *d, int fd) {
+  if (d == NULL) return;
+  if (d->orig_crtc == NULL) return;
+
+  drmModeSetCrtc(fd, d->orig_crtc->crtc_id,
+                 d->orig_crtc->buffer_id,
+                 d->orig_crtc->x,
+                 d->orig_crtc->y,
+                 &d->connector_id, 1, &d->orig_crtc->mode);
+
+  drmModeFreeCrtc(d->orig_crtc);
+  d->orig_crtc = NULL;
+}
+
 static void clean_up_drm(struct exynos_drm *d, int fd) {
   if (d) {
     if (d->encoder) drmModeFreeEncoder(d->encoder);
@@ -187,6 +202,89 @@ static void exynos_close(struct hook_data *data) {
   data->drm = NULL;
 }
 
+static int exynos_init(struct hook_data *data, unsigned bpp) {
+  struct exynos_drm *drm = data->drm;
+  const int fd = data->drm_fd;
+
+  unsigned i;
+
+  if (vconf.use_screen == 0) {
+    fprintf(stderr, "[exynos_init] info: skipping init\n");
+
+    data->width = vconf.width;
+    data->height = vconf.height;
+
+    goto out;
+  }
+
+  if (vconf.width != 0 && vconf.height != 0) {
+    for (i = 0; i < drm->connector->count_modes; i++) {
+      if (drm->connector->modes[i].hdisplay == vconf.width &&
+          drm->connector->modes[i].vdisplay == vconf.height) {
+        drm->mode = &drm->connector->modes[i];
+        break;
+      }
+    }
+
+    if (drm->mode == NULL) {
+      fprintf(stderr, "[exynos_init] error: requested resolution (%dx%d) not available\n",
+              vconf.width, vconf.height);
+      goto fail;
+    }
+
+  } else {
+    /* Select first mode, which is the native one. */
+    drm->mode = &drm->connector->modes[0];
+  }
+
+  if (drm->mode->hdisplay == 0 || drm->mode->vdisplay == 0) {
+    fprintf(stderr, "[exynos_init] error: failed to select sane resolution\n");
+    goto fail;
+  }
+
+  drm->crtc_id = drm->encoder->crtc_id;
+  drm->connector_id = drm->connector->connector_id;
+  drm->orig_crtc = drmModeGetCrtc(fd, drm->crtc_id);
+  if (!drm->orig_crtc)
+    fprintf(stderr, "[exynos_init] warning: cannot find original crtc\n");
+
+  data->width = drm->mode->hdisplay;
+  data->height = drm->mode->vdisplay;
+
+out:
+  data->bpp = bpp;
+  data->pitch = bpp * data->width;
+  data->size = data->pitch * data->height;
+
+  fprintf(stderr, "[exynos_init] info: selected %ux%u resolution with %u bpp\n",
+          data->width, data->height, data->bpp);
+
+  return 0;
+
+fail:
+  restore_crtc(drm, fd);
+
+  drm->mode = NULL;
+
+  return -1;
+}
+
+/* Counterpart to exynos_init. */
+static void exynos_deinit(struct hook_data *data) {
+  struct exynos_drm *drm = data->drm;
+
+  restore_crtc(drm, data->drm_fd);
+
+  drm = NULL;
+
+  data->width = 0;
+  data->height = 0;
+
+  data->bpp = 0;
+  data->pitch = 0;
+  data->size = 0;
+}
+
 static void init_var_screeninfo(struct hook_data *data) {
   if (data->fake_vscreeninfo) return;
 
@@ -257,6 +355,13 @@ static int hook_initialize(struct hook_data *data) {
     goto out;
   }
 
+  if (exynos_init(data, vconf.bpp != 0 ? vconf.bpp : 4) != 0) {
+    fprintf(stderr, "[hook_initialize] error: initialization failed\n");
+
+    ret = -1;
+    goto out; /* TODO */
+  }
+
   fd = data->drm_fd;
   dev = exynos_device_create(fd);
 
@@ -304,17 +409,12 @@ static int hook_initialize(struct hook_data *data) {
     goto out;
   }
 
-  data->drm_fd = fd;
-  data->width = vconf.width;
-  data->height = vconf.height;
   data->num_buffers = vconf.num_buffers;
   data->base_addr = 0x67900000;
   data->edev = dev;
 
   init_var_screeninfo(data);
   init_fix_screeninfo(data);
-
-  data->size = vconf.width * vconf.height * 4;
 
   data->initialized = 1;
   ret = 0;
@@ -352,6 +452,7 @@ static int hook_free(struct hook_data *data) {
   exynos_device_destroy(data->edev);
   data->edev = NULL;
 
+  exynos_deinit(data);
   exynos_close(data);
 
   data->width = 0;

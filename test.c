@@ -27,6 +27,7 @@ static const struct color3f testcolors[3] = {
 const struct video_config vconf = {
   .width = 1280,
   .height = 720,
+  .bpp = 4,
   .num_buffers = 3,
   .use_screen = 0
 };

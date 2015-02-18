@@ -57,7 +57,9 @@ struct hook_data {
 
   struct fb_var_screeninfo *fake_vscreeninfo;
   struct fb_fix_screeninfo *fake_fscreeninfo;
-  unsigned long size;
+  unsigned pitch;
+  unsigned size;
+  unsigned bpp;
 
   struct exynos_device *edev;
   struct exynos_bo **bos;
@@ -70,6 +72,7 @@ struct hook_data {
 struct video_config {
   unsigned width;
   unsigned height;
+  unsigned bpp; /* bytes per pixel */
   unsigned num_buffers;
   unsigned use_screen;
 };
