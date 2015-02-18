@@ -383,9 +383,13 @@ static int exynos_alloc(struct hook_data *data) {
   data->device = device;
 
   if (vconf.use_screen == 1) {
+    int ret;
     /* Setup CRTC: display the last allocated page. */
-    drmModeSetCrtc(data->drm_fd, data->drm->crtc_id, pages[data->num_pages - 1].buf_id,
+    ret = drmModeSetCrtc(data->drm_fd, data->drm->crtc_id, pages[data->num_pages - 1].buf_id,
                    0, 0, &data->drm->connector_id, 1, data->drm->mode);
+    if (ret) {
+      fprintf(stderr, "[exynos_init] error: drmModeSetCrtc failed\n");
+    }
   }
 
   return 0;
@@ -541,18 +545,23 @@ static int hook_free(struct hook_data *data) {
 }
 
 static int hook_flip(struct hook_data *data, unsigned bufidx) {
+  int ret;
+
   pthread_mutex_lock(&hook_mutex);
 
-#ifndef NDEBUG
-  fprintf(stderr, "DEBUG: in hook_flip (bufidx = %u)\n", bufidx);
-#endif
+  ret = 0;
 
-  /* TODO: implement */
+  if (vconf.use_screen == 1) {
+    if (drmModeSetCrtc(data->drm_fd, data->drm->crtc_id, data->pages[bufidx].buf_id,
+                       0, 0, &data->drm->connector_id, 1, data->drm->mode)) {
+      fprintf(stderr, "[hook_flip] error: drmModeSetCrtc failed\n");
+      ret = -1;
+    }
+  }
 
   pthread_mutex_unlock(&hook_mutex);
 
-  /* fake success */
-  return 0;
+  return ret;
 }
 
 static int hook_buffer(struct hook_data* data, unsigned bufidx) {
