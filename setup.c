@@ -64,9 +64,11 @@ static int get_device_index() {
 }
 
 static void clean_up_drm(struct exynos_drm *d, int fd) {
-  if (d->encoder) drmModeFreeEncoder(d->encoder);
-  if (d->connector) drmModeFreeConnector(d->connector);
-  if (d->resources) drmModeFreeResources(d->resources);
+  if (d) {
+    if (d->encoder) drmModeFreeEncoder(d->encoder);
+    if (d->connector) drmModeFreeConnector(d->connector);
+    if (d->resources) drmModeFreeResources(d->resources);
+  }
 
   free(d);
   close(fd);
@@ -175,6 +177,16 @@ fail:
   return -1;
 }
 
+/* Counterpart to exynos_open. */
+static void exynos_close(struct hook_data *data) {
+  free(data->fliphandler);
+  data->fliphandler = NULL;
+
+  clean_up_drm(data->drm, data->drm_fd);
+  data->drm_fd = -1;
+  data->drm = NULL;
+}
+
 static void init_var_screeninfo(struct hook_data *data) {
   if (data->fake_vscreeninfo) return;
 
@@ -239,6 +251,8 @@ static int hook_initialize(struct hook_data *data) {
   if (data->initialized) return 0;
 
   if (exynos_open(data)) {
+    fprintf(stderr, "[hook_initialize] error: opening device failed\n");
+
     ret = -1;
     goto out;
   }
@@ -336,10 +350,9 @@ static int hook_free(struct hook_data *data) {
   data->bo_fds = NULL;
 
   exynos_device_destroy(data->edev);
-  close(data->drm_fd);
-
   data->edev = NULL;
-  data->drm_fd = -1;
+
+  exynos_close(data);
 
   data->width = 0;
   data->height = 0;
