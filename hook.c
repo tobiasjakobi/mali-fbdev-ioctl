@@ -41,8 +41,10 @@ static struct hook_data hook = {
 static hsetupfnc hinit = NULL;
 static hsetupfnc hfree = NULL;
 static hflipfnc hflip = NULL;
+static hbufferfnc hbuffer = NULL;
 
-void setup_hook_callback(hsetupfnc init_, hsetupfnc free_, hflipfnc flip_) {
+void setup_hook_callback(hsetupfnc init_, hsetupfnc free_,
+  hflipfnc flip_, hbufferfnc buffer_) {
 #ifdef HOOK_VERBOSE
   fprintf(stderr, "info: setup_hook_callback called\n");
 #endif
@@ -50,6 +52,7 @@ void setup_hook_callback(hsetupfnc init_, hsetupfnc free_, hflipfnc flip_) {
   hinit = init_;
   hfree = free_;
   hflip = flip_;
+  hbuffer = buffer_;
 }
 
 static int emulate_get_var_screeninfo(void *ptr) {
@@ -127,7 +130,7 @@ static int emulate_mali_mem_map_ext(void *ptr) {
     const unsigned long offset = data->phys_addr - hook.base_addr;
 
     if ((offset % hook.size) == 0)
-      buf_fd = -1 /* TODO: hook.bo_fds[offset / hook.size] */;
+      buf_fd = hbuffer(&hook, offset / hook.size);
   }
 
   if (buf_fd != -1) {
