@@ -18,7 +18,6 @@ static struct hook_data hook = {
 
   .width = 0,
   .height = 0,
-  .num_buffers = 0,
   .base_addr = 0,
   .initialized = 0,
 
@@ -31,11 +30,13 @@ static struct hook_data hook = {
   .bpp = 0,
 
   .edev = NULL,
-  .bos = NULL,
-  .bo_fds = NULL,
-
   .drm = NULL,
-  .fliphandler = NULL
+  .fliphandler = NULL,
+
+  .pages = NULL,
+  .num_pages = 0,
+  .cur_page = NULL,
+  .pageflip_pending = 0
 };
 
 static hsetupfnc hinit = NULL;
@@ -127,7 +128,7 @@ static int emulate_mali_mem_map_ext(void *ptr) {
     const unsigned long offset = data->phys_addr - hook.base_addr;
 
     if ((offset % hook.size) == 0)
-      buf_fd = hook.bo_fds[offset / hook.size];
+      buf_fd = -1 /* TODO: hook.bo_fds[offset / hook.size] */;
   }
 
   if (buf_fd != -1) {

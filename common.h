@@ -32,6 +32,7 @@ typedef void* (*mmapfnc)(void*, size_t, int, int, int, off_t);
 typedef int (*munmapfnc)(void*, size_t);
 
 /* forward declarations */
+struct exynos_page;
 struct exynos_fliphandler;
 struct exynos_drm;
 
@@ -49,7 +50,6 @@ struct hook_data {
 
   unsigned width;
   unsigned height;
-  unsigned num_buffers;
   unsigned long base_addr;
   unsigned initialized;
 
@@ -62,11 +62,13 @@ struct hook_data {
   unsigned bpp;
 
   struct exynos_device *edev;
-  struct exynos_bo **bos;
-  int *bo_fds;
-
   struct exynos_drm *drm;
   struct exynos_fliphandler *fliphandler;
+
+  struct exynos_page *pages;
+  unsigned num_pages;
+  struct exynos_page *cur_page; /* currently displayed page */
+  unsigned pageflip_pending;
 };
 
 struct video_config {

@@ -18,6 +18,17 @@ static pthread_mutex_t hook_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 extern const struct video_config vconf;
 
+struct exynos_page {
+  struct exynos_bo *bo;
+  uint32_t buf_id;
+  int fd;
+
+  struct hook_data *base;
+
+  bool used; /* Set if page is currently used. */
+  bool clear; /* Set if page has to be cleared. */
+};
+
 struct exynos_fliphandler {
   struct pollfd fds;
   drmEventContext evctx;
@@ -87,6 +98,19 @@ static void clean_up_drm(struct exynos_drm *d, int fd) {
 
   free(d);
   close(fd);
+}
+
+static void clean_up_pages(struct exynos_page *p, unsigned cnt) {
+  unsigned i;
+
+  for (i = 0; i < cnt; ++i) {
+    if (p[i].bo != NULL) {
+      if (p[i].buf_id != 0)
+        drmModeRmFB(p[i].buf_id, p[i].bo->handle);
+
+      exynos_bo_destroy(p[i].bo);
+    }
+  }
 }
 
 static int exynos_open(struct hook_data *data) {
@@ -252,6 +276,8 @@ static int exynos_init(struct hook_data *data, unsigned bpp) {
   data->height = drm->mode->vdisplay;
 
 out:
+  data->num_pages = vconf.num_buffers;
+
   data->bpp = bpp;
   data->pitch = bpp * data->width;
   data->size = data->pitch * data->height;
@@ -285,6 +311,109 @@ static void exynos_deinit(struct hook_data *data) {
   data->size = 0;
 }
 
+static int exynos_alloc(struct hook_data *data) {
+  struct exynos_device *device;
+  struct exynos_bo *bo;
+  struct exynos_page *pages;
+  struct drm_prime_handle req = { 0 };
+  unsigned i;
+
+  const unsigned flags = 0;
+
+  device = exynos_device_create(data->drm_fd);
+  if (device == NULL) {
+    fprintf(stderr, "[exynos_init] error: failed to create device from fd\n");
+    return -1;
+  }
+
+  pages = calloc(data->num_pages, sizeof(struct exynos_page));
+  if (pages == NULL) {
+    fprintf(stderr, "[exynos_init] error: failed to allocate pages\n");
+    goto fail_alloc;
+  }
+
+  for (i = 0; i < data->num_pages; ++i) {
+    bo = exynos_bo_create(device, data->size, flags);
+    if (bo == NULL) {
+      fprintf(stderr, "[exynos_init] error: failed to create buffer object\n");
+      goto fail;
+    }
+
+    req.handle = bo->handle;
+
+    if (drmIoctl(data->drm_fd, DRM_IOCTL_PRIME_HANDLE_TO_FD, &req) < 0) {
+      fprintf(stderr, "[exynos_init] error: failed to get fd from bo\n");
+      exynos_bo_destroy(bo);
+      goto fail;
+    }
+
+    /* Don't map the BO, since we don't access it through userspace. */
+
+    pages[i].bo = bo;
+    pages[i].fd = req.fd;
+    pages[i].base = data;
+
+    pages[i].used = false;
+    pages[i].clear = true;
+  }
+
+  if (vconf.use_screen == 1) {
+    const uint32_t pixel_format = (data->bpp == 2) ? DRM_FORMAT_RGB565 : DRM_FORMAT_XRGB8888;
+    uint32_t handles[4] = {0}, pitches[4] = {0}, offsets[4] = {0};
+
+    pitches[0] = data->pitch;
+    offsets[0] = 0;
+
+    for (i = 0; i < data->num_pages; ++i) {
+      handles[0] = pages[i].bo->handle;
+
+      if (drmModeAddFB2(data->drm_fd, data->width, data->height,
+                        pixel_format, handles, pitches, offsets,
+                        &pages[i].buf_id, flags)) {
+        fprintf(stderr, "[exynos_init] error: failed to add bo %u to fb\n", i);
+        goto fail;
+      }
+    }
+  }
+
+  data->pages = pages;
+  data->edev = device;
+
+  if (vconf.use_screen == 1) {
+    /* Setup CRTC: display the last allocated page. */
+    drmModeSetCrtc(data->drm_fd, data->drm->crtc_id, pages[data->num_pages - 1].buf_id,
+                   0, 0, &data->drm->connector_id, 1, data->drm->mode);
+  }
+
+  return 0;
+
+fail:
+  clean_up_pages(pages, data->num_pages);
+
+fail_alloc:
+  exynos_device_destroy(device);
+
+  return -1;
+}
+
+/* Counterpart to exynos_alloc. */
+static void exynos_free(struct hook_data *data) {
+  unsigned i;
+
+  if (vconf.use_screen == 1) {
+    /* Disable the CRTC. */
+    drmModeSetCrtc(data->drm_fd, data->drm->crtc_id, 0,
+                   0, 0, &data->drm->connector_id, 1, NULL);
+  }
+
+  clean_up_pages(data->pages, data->num_pages);
+
+  free(data->pages);
+  data->pages = NULL;
+
+  exynos_device_destroy(data->edev);
+}
+
 static void init_var_screeninfo(struct hook_data *data) {
   if (data->fake_vscreeninfo) return;
 
@@ -292,7 +421,7 @@ static void init_var_screeninfo(struct hook_data *data) {
     .xres = data->width,
     .yres = data->height,
     .xres_virtual = data->width,
-    .yres_virtual = data->height * data->num_buffers,
+    .yres_virtual = data->height * data->num_pages,
     .bits_per_pixel = data->bpp * 8,
     .red = {
       .offset = 16,
@@ -336,13 +465,7 @@ static void init_fix_screeninfo(struct hook_data *data) {
 }
 
 static int hook_initialize(struct hook_data *data) {
-  int fd, ret, devidx;
-  struct exynos_device *dev;
-  struct exynos_bo *bo;
-  struct drm_prime_handle req;
-
-  unsigned i;
-  char buf[32];
+  int ret;
 
   pthread_mutex_lock(&hook_mutex);
 
@@ -362,56 +485,14 @@ static int hook_initialize(struct hook_data *data) {
     goto out; /* TODO */
   }
 
-  fd = data->drm_fd;
-  dev = exynos_device_create(fd);
-
-  data->bos = malloc(sizeof(struct exynos_bo*) * vconf.num_buffers);
-  data->bo_fds = malloc(sizeof(int) * vconf.num_buffers);
-
-  for (i = 0; i < vconf.num_buffers; ++i) {
-    data->bos[i] = NULL;
-    data->bo_fds[i] = -1;
-
-    bo = exynos_bo_create(dev, vconf.width * vconf.height * 4, 0);
-
-    if (bo == NULL) {
-      fprintf(stderr, "[hook_initialize] error: failed to create buffer object (index = %u)\n", i);
-      break;
-    }
-
-    memset(&req, 0, sizeof(struct drm_prime_handle));
-    req.handle = bo->handle;
-
-    ret = drmIoctl(fd, DRM_IOCTL_PRIME_HANDLE_TO_FD, &req);
-    if (ret < 0) {
-      fprintf(stderr, "[hook_initialize] error: failed to get fd from bo\n");
-      break;
-    }
-
-    data->bos[i] = bo;
-    data->bo_fds[i] = req.fd;
-  }
-
-  if (i != vconf.num_buffers) {
-    while (i-- > 0)
-      exynos_bo_destroy(data->bos[i]);
-
-    free(data->bos);
-    free(data->bo_fds);
-
-    data->bos = NULL;
-    data->bo_fds = NULL;
-
-    exynos_device_destroy(dev);
-    close(fd);
+  if (exynos_alloc(data)) {
+    fprintf(stderr, "[hook_initialize] error: allocation failed\n");
 
     ret = -1;
-    goto out;
+    goto out; /* TODO */
   }
 
-  data->num_buffers = vconf.num_buffers;
   data->base_addr = 0x67900000;
-  data->edev = dev;
 
   init_var_screeninfo(data);
   init_fix_screeninfo(data);
@@ -440,24 +521,10 @@ static int hook_free(struct hook_data *data) {
   data->fake_fscreeninfo = NULL;
   data->size = 0;
 
-  for (i = 0; i < vconf.num_buffers; ++i)
-    exynos_bo_destroy(data->bos[i]);
-
-  free(data->bos);
-  free(data->bo_fds);
-
-  data->bos = NULL;
-  data->bo_fds = NULL;
-
-  exynos_device_destroy(data->edev);
-  data->edev = NULL;
-
+  exynos_free(data);
   exynos_deinit(data);
   exynos_close(data);
 
-  data->width = 0;
-  data->height = 0;
-  data->num_buffers = 0;
   data->base_addr = 0;
 
   data->initialized = 0;
