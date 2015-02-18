@@ -34,7 +34,7 @@ libioctlsetup: setup.o; ar rs libioctlsetup.a $^
 clean:
 	rm -f *.o
 	rm -f $(objects)
-	rm -f trace.out
+	rm -f trace.out libioctlsetup.a
 
 strip:
 	strip -s $(objects)
