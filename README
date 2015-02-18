@@ -21,3 +21,7 @@ Even though the blob mainly uses MEM_{MAP,UNMAP}_EXT to setup memory mappings, i
 
 TODOs:
 - initial clear of buffers with G2D
+- flip behaviour:
+    num_pages == 1: do nothing
+    num_pages == 2: queue flip and block until it hits screen
+    num_pages == 3: queue flip and return (but only queue one)
