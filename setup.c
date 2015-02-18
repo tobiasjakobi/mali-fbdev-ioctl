@@ -293,7 +293,7 @@ static void init_var_screeninfo(struct hook_data *data) {
     .yres = data->height,
     .xres_virtual = data->width,
     .yres_virtual = data->height * data->num_buffers,
-    .bits_per_pixel = 32,
+    .bits_per_pixel = data->bpp * 8,
     .red = {
       .offset = 16,
       .length = 8
@@ -328,7 +328,7 @@ static void init_fix_screeninfo(struct hook_data *data) {
     .visual = FB_VISUAL_TRUECOLOR,
     .xpanstep = 1,
     .ypanstep = 1,
-    .line_length = data->width * 4
+    .line_length = data->pitch
   };
 
   data->fake_fscreeninfo = malloc(sizeof(struct fb_fix_screeninfo));
