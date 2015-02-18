@@ -412,6 +412,7 @@ static void exynos_free(struct hook_data *data) {
   data->pages = NULL;
 
   exynos_device_destroy(data->device);
+  data->device = NULL;
 }
 
 static void init_var_screeninfo(struct hook_data *data) {
@@ -473,23 +474,17 @@ static int hook_initialize(struct hook_data *data) {
 
   if (exynos_open(data)) {
     fprintf(stderr, "[hook_initialize] error: opening device failed\n");
-
-    ret = -1;
-    goto out;
+    goto fail;
   }
 
   if (exynos_init(data, vconf.bpp != 0 ? vconf.bpp : 4) != 0) {
     fprintf(stderr, "[hook_initialize] error: initialization failed\n");
-
-    ret = -1;
-    goto out; /* TODO */
+    goto fail_init;
   }
 
   if (exynos_alloc(data)) {
     fprintf(stderr, "[hook_initialize] error: allocation failed\n");
-
-    ret = -1;
-    goto out; /* TODO */
+    goto fail_alloc;
   }
 
   data->base_addr = 0x67900000;
@@ -498,7 +493,18 @@ static int hook_initialize(struct hook_data *data) {
   init_fix_screeninfo(data);
 
   data->initialized = 1;
+
   ret = 0;
+  goto out;
+
+fail_alloc:
+  exynos_deinit(data);
+
+fail_init:
+  exynos_close(data);
+
+fail:
+  ret = -1;
 
 out:
   pthread_mutex_unlock(&hook_mutex);
@@ -516,16 +522,13 @@ static int hook_free(struct hook_data *data) {
 
   free(data->fake_vscreeninfo);
   free(data->fake_fscreeninfo);
-
   data->fake_vscreeninfo = NULL;
   data->fake_fscreeninfo = NULL;
-  data->size = 0;
+  data->base_addr = 0;
 
   exynos_free(data);
   exynos_deinit(data);
   exynos_close(data);
-
-  data->base_addr = 0;
 
   data->initialized = 0;
 
