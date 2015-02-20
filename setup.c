@@ -379,18 +379,17 @@ static int exynos_alloc(struct hook_data *data) {
     }
   }
 
-  data->pages = pages;
-  data->device = device;
-
   if (vconf.use_screen == 1) {
-    int ret;
     /* Setup CRTC: display the last allocated page. */
-    ret = drmModeSetCrtc(data->drm_fd, data->drm->crtc_id, pages[data->num_pages - 1].buf_id,
-                   0, 0, &data->drm->connector_id, 1, data->drm->mode);
-    if (ret) {
+    if (drmModeSetCrtc(data->drm_fd, data->drm->crtc_id, pages[data->num_pages - 1].buf_id,
+                       0, 0, &data->drm->connector_id, 1, data->drm->mode)) {
       fprintf(stderr, "[exynos_init] error: drmModeSetCrtc failed\n");
+      goto fail;
     }
   }
+
+  data->pages = pages;
+  data->device = device;
 
   return 0;
 
@@ -409,8 +408,10 @@ static void exynos_free(struct hook_data *data) {
 
   if (vconf.use_screen == 1) {
     /* Disable the CRTC. */
-    drmModeSetCrtc(data->drm_fd, data->drm->crtc_id, 0,
-                   0, 0, &data->drm->connector_id, 1, NULL);
+    if (drmModeSetCrtc(data->drm_fd, data->drm->crtc_id, 0,
+                       0, 0, &data->drm->connector_id, 1, NULL)) {
+      fprintf(stderr, "[exynos_free] warning: failed to disable the crtc\n");
+    }
   }
 
   clean_up_pages(data->pages, data->num_pages);
