@@ -113,6 +113,24 @@ static void clean_up_pages(struct exynos_page *p, unsigned cnt) {
   }
 }
 
+/* The main pageflip handler, which the DRM executes when it flips to the page. *
+ * Decreases the pending pageflip count and updates the current page.           */
+static void page_flip_handler(int fd, unsigned frame, unsigned sec,
+                              unsigned usec, void *data) {
+  struct exynos_page *page = data;
+
+#ifndef NDEBUG
+  fprintf(stderr, "[page_flip_handler] info: page = %p\n", page);
+#endif
+
+  if (page->base->cur_page != NULL) {
+    page->base->cur_page->used = false;
+  }
+
+  page->base->pageflip_pending--;
+  page->base->cur_page = page;
+}
+
 static int exynos_open(struct hook_data *data) {
   char buf[32];
   int devidx;
@@ -201,7 +219,7 @@ static int exynos_open(struct hook_data *data) {
   fliphandler->fds.fd = fd;
   fliphandler->fds.events = POLLIN;
   fliphandler->evctx.version = DRM_EVENT_CONTEXT_VERSION;
-  fliphandler->evctx.page_flip_handler = NULL /* TODO: page_flip_handler */;
+  fliphandler->evctx.page_flip_handler = page_flip_handler;
 
   data->drm_fd = fd;
   data->drm = drm;
