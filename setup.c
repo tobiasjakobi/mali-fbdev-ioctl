@@ -131,6 +131,21 @@ static void page_flip_handler(int fd, unsigned frame, unsigned sec,
   page->base->cur_page = page;
 }
 
+static void wait_flip(struct exynos_fliphandler *fh) {
+  const int timeout = -1;
+
+  fh->fds.revents = 0;
+
+  if (poll(&fh->fds, 1, timeout) < 0)
+    return;
+
+  if (fh->fds.revents & (POLLHUP | POLLERR))
+    return;
+
+  if (fh->fds.revents & POLLIN)
+    drmHandleEvent(fh->fds.fd, &fh->evctx);
+}
+
 static int exynos_open(struct hook_data *data) {
   char buf[32];
   int devidx;
@@ -297,7 +312,7 @@ static int exynos_init(struct hook_data *data, unsigned bpp) {
   data->height = drm->mode->vdisplay;
 
 out:
-  data->num_pages = vconf.num_buffers;
+  data->num_pages = vconf.num_buffers != 0 ? vconf.num_buffers : 2;
 
   data->bpp = bpp;
   data->pitch = bpp * data->width;
@@ -441,6 +456,27 @@ static void exynos_free(struct hook_data *data) {
   data->device = NULL;
 }
 
+static int exynos_flip(struct hook_data *data, struct exynos_page *page) {
+  /* We don't queue multiple page flips. */
+  if (data->pageflip_pending > 0) {
+    wait_flip(data->fliphandler);
+  }
+
+  /* Issue a page flip at the next vblank interval. */
+  if (drmModePageFlip(data->drm_fd, data->drm->crtc_id, page->buf_id,
+                      DRM_MODE_PAGE_FLIP_EVENT, page)) {
+    fprintf(stderr, "[exynos_flip] error: failed to issue page flip\n");
+    return -1;
+  } else {
+    data->pageflip_pending++;
+  }
+
+  /* On startup no frame is displayed. We therefore wait for the initial flip to finish. */
+  if (data->cur_page == NULL) wait_flip(data->fliphandler);
+
+  return 0;
+}
+
 static void init_var_screeninfo(struct hook_data *data) {
   if (data->fake_vscreeninfo) return;
 
@@ -573,16 +609,36 @@ static int hook_flip(struct hook_data *data, unsigned bufidx) {
 
   pthread_mutex_lock(&hook_mutex);
 
-  ret = 0;
-
-  if (vconf.use_screen == 1) {
-    if (drmModeSetCrtc(data->drm_fd, data->drm->crtc_id, data->pages[bufidx].buf_id,
-                       0, 0, &data->drm->connector_id, 1, data->drm->mode)) {
-      fprintf(stderr, "[hook_flip] error: drmModeSetCrtc failed\n");
-      ret = -1;
-    }
+  if (vconf.use_screen == 0) {
+    ret = 0;
+    goto out;
   }
 
+  assert(data->num_pages != 0);
+
+  switch (data->num_pages) {
+    case 1:
+      ret = 0;
+    break;
+
+    case 2:
+      if (exynos_flip(data, &data->pages[bufidx])) {
+        ret = -1;
+      } else {
+        wait_flip(data->fliphandler);
+        ret = 0;
+      }
+    break;
+
+    default: /* three or more pages */
+      if (exynos_flip(data, &data->pages[bufidx]))
+        ret = -1;
+      else
+        ret = 0;
+    break;
+  }
+
+out:
   pthread_mutex_unlock(&hook_mutex);
 
   return ret;
