@@ -480,6 +480,11 @@ static int hook_initialize(struct hook_data *data) {
 
   if (data->initialized) return 0;
 
+  if (vconf.bpp != 0 && vconf.bpp != 4) {
+    fprintf(stderr, "[hook_initialize] error: only bpp=4 supported at the moment\n");
+    goto fail;
+  }
+
   if (exynos_open(data)) {
     fprintf(stderr, "[hook_initialize] error: opening device failed\n");
     goto fail;
