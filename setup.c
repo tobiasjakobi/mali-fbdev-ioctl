@@ -442,7 +442,7 @@ static void exynos_free(struct hook_data *data) {
   if (vconf.use_screen == 1) {
     /* Disable the CRTC. */
     if (drmModeSetCrtc(data->drm_fd, data->drm->crtc_id, 0,
-                       0, 0, &data->drm->connector_id, 1, NULL)) {
+                       0, 0, NULL, 0, NULL)) {
       fprintf(stderr, "[exynos_free] warning: failed to disable the crtc\n");
     }
   }
