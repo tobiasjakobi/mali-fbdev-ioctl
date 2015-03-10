@@ -21,3 +21,4 @@ Even though the blob mainly uses MEM_{MAP,UNMAP}_EXT to setup memory mappings, i
 
 TODOs:
 - initial clear of buffers with G2D
+- add refcounting to open/close, so that applications can open the fbdev fb multiple times
