@@ -89,7 +89,8 @@ int pixmap_test(EGLDisplay dpy, EGLContext ctx,
                 EGLConfig cnf, EGLSurface cursurf) {
   EGLSurface pixsurf;
   EGLImageKHR image;
-  GLuint renderbuffer;
+  GLuint renderbuffer, framebuffer;
+  GLenum status;
 
   void *pixdata;
   int ret;
@@ -156,11 +157,29 @@ int pixmap_test(EGLDisplay dpy, EGLContext ctx,
     return -4;
   }
 
+  /* bind image to renderbuffer */
   eglGetError();
   glGenRenderbuffers(1, &renderbuffer);
   glBindRenderbuffer(GL_RENDERBUFFER, renderbuffer);
   glEGLImageTargetRenderbufferStorageOES(GL_RENDERBUFFER, image);
   fprintf(stderr, "EGLImageTargetRenderbufferStorageOES: status = %s\n", egl_error_string(eglGetError()));
+
+   /* bind renderbuffer to framebuffer */
+  eglGetError();
+  glGenFramebuffers(1, &framebuffer);
+  glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+  glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, renderbuffer);
+  fprintf(stderr, "glFramebufferRenderbuffer: status = %s\n", egl_error_string(eglGetError()));
+
+  if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+    fprintf(stderr, "info: framebuffer not complete\n");
+
+  /* TODO: apply some more operations on the framebuffer */
+
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+  glDeleteFramebuffers(1, &framebuffer);
+  glDeleteRenderbuffers(1, &renderbuffer);
 
   eglDestroyImageKHR(dpy, image);
   free(pixdata);
