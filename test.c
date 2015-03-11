@@ -19,7 +19,9 @@
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
 #include <EGL/fbdev_window.h>
+
 #include <GLES2/gl2.h>
+#include <GLES2/gl2ext.h>
 
 #include "common.h"
 
@@ -56,13 +58,54 @@ const struct video_config vconf = {
 
 extern void setup_hook();
 
+typedef void GL_APIENTRY (*fncEGLImageTargetRenderbufferStorageOES)(GLenum, GLeglImageOES);
+typedef void GL_APIENTRY (*fncEGLImageTargetTexture2DOES)(GLenum, GLeglImageOES);
+
+const char* egl_error_string(EGLint error) {
+  if (error < 0x3000 || error > 0x300D)
+    return "unknown error code";
+
+  static const char *table[] = {
+    "success",
+    "not initialized",
+    "bad access",
+    "bad alloc",
+    "bad attribute",
+    "bad config",
+    "bad context",
+    "bad current surface",
+    "bad display",
+    "bad match",
+    "bad native pixmap",
+    "bad native window",
+    "bad parameter",
+    "bad surface"
+  };
+
+  return table[error - 0x3000];
+}
+
 int pixmap_test(EGLDisplay dpy, EGLContext ctx,
                 EGLConfig cnf, EGLSurface cursurf) {
   EGLSurface pixsurf;
   EGLImageKHR image;
+  GLuint renderbuffer;
 
   void *pixdata;
   int ret;
+
+  fncEGLImageTargetRenderbufferStorageOES glEGLImageTargetRenderbufferStorageOES;
+  fncEGLImageTargetTexture2DOES glEGLImageTargetTexture2DOES;
+
+  glEGLImageTargetRenderbufferStorageOES = (fncEGLImageTargetRenderbufferStorageOES)
+    eglGetProcAddress("glEGLImageTargetRenderbufferStorageOES");
+  glEGLImageTargetTexture2DOES = (fncEGLImageTargetTexture2DOES)
+    eglGetProcAddress("glEGLImageTargetTexture2DOES");
+
+  if (glEGLImageTargetRenderbufferStorageOES == 0 || glEGLImageTargetTexture2DOES == 0) {
+    fprintf(stderr, "error: failed to get EGLImage function pointers\n");
+    return -5;
+  }
 
   pixdata = malloc(640 * 480 * 4);
   const fbdev_pixmap pixmap = {
@@ -112,6 +155,12 @@ int pixmap_test(EGLDisplay dpy, EGLContext ctx,
     fprintf(stderr, "errcode = 0x%x\n", eglGetError());
     return -4;
   }
+
+  eglGetError();
+  glGenRenderbuffers(1, &renderbuffer);
+  glBindRenderbuffer(GL_RENDERBUFFER, renderbuffer);
+  glEGLImageTargetRenderbufferStorageOES(GL_RENDERBUFFER, image);
+  fprintf(stderr, "EGLImageTargetRenderbufferStorageOES: status = %s\n", egl_error_string(eglGetError()));
 
   eglDestroyImageKHR(dpy, image);
   free(pixdata);
