@@ -161,6 +161,22 @@ int main(int argc, char* argv[]) {
     fprintf(stderr, "info: eglInitialize: major = %d, minor = %d\n", major, minor);
   }
 
+  static const struct {
+    EGLint name;
+    const char *string;
+  } queries[] = {
+    {EGL_CLIENT_APIS, "Client APIs"},
+    {EGL_VENDOR, "Vendor"},
+    {EGL_VERSION, "Version"},
+    {EGL_EXTENSIONS, "Extensions"}
+  };
+
+  fprintf(stderr, "Querying information about the EGL connection:\n");
+  for (i = 0; i < 4; ++i) {
+    fprintf(stderr, "%s: %s\n", queries[i].string,
+            eglQueryString(disp, queries[i].name));
+  }
+
   ret = eglChooseConfig(disp, attribs, &conf, 1, &nconf);
   if (ret != EGL_TRUE) {
     fprintf(stderr, "error: eglChooseConfig failed\n");
