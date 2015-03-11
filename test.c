@@ -17,9 +17,13 @@
 
 #include <EGL/eglplatform_fb.h>
 #include <EGL/egl.h>
+#include <EGL/eglext.h>
+#include <EGL/fbdev_window.h>
 #include <GLES2/gl2.h>
 
 #include "common.h"
+
+#include <stdlib.h>
 
 /* Some envvars that the blob seems to use:
  * MALI_NOCLEAR
@@ -52,6 +56,69 @@ const struct video_config vconf = {
 
 extern void setup_hook();
 
+int pixmap_test(EGLDisplay dpy, EGLContext ctx,
+                EGLConfig cnf, EGLSurface cursurf) {
+  EGLSurface pixsurf;
+  EGLImageKHR image;
+
+  void *pixdata;
+  int ret;
+
+  pixdata = malloc(640 * 480 * 4);
+  const fbdev_pixmap pixmap = {
+    .height = 640,
+    .width = 480,
+    .bytes_per_pixel = 4,
+    .buffer_size = 32,
+    .red_size = 8,
+    .green_size = 8,
+    .blue_size = 8,
+    .alpha_size = 8,
+    .luminance_size = 0,
+    .flags = FBDEV_PIXMAP_DEFAULT, /* any other flag seems to fail */
+    .data = pixdata,
+    .format = 0
+  };
+
+  fprintf(stderr, "info: calling eglCreatePixmapSurface\n");
+  eglGetError();
+  pixsurf = eglCreatePixmapSurface(dpy, cnf, (NativePixmapType)(&pixmap), NULL);
+  if (pixsurf == EGL_NO_SURFACE) {
+    fprintf(stderr, "error: eglCreatePixmapSurface failed\n");
+    fprintf(stderr, "errcode = 0x%x\n", eglGetError());
+    return -1;
+  }
+
+  ret = eglMakeCurrent(dpy, pixsurf, pixsurf, ctx);
+  if (ret != EGL_TRUE) {
+    fprintf(stderr, "error: eglMakeCurrent (pixmap) failed\n");
+    return -2;
+  }
+
+  ret = eglMakeCurrent(dpy, cursurf, cursurf, ctx);
+  if (ret != EGL_TRUE) {
+    fprintf(stderr, "error: eglMakeCurrent (regular) failed\n");
+    return -3;
+  }
+
+  fprintf(stderr, "info: calling eglDestroySurface (pixmap)\n");
+  eglDestroySurface(dpy, pixsurf);
+
+  fprintf(stderr, "info: calling eglCreateImageKHR\n");
+  eglGetError();
+  image = (EGLImageKHR)eglCreateImageKHR(dpy, EGL_NO_CONTEXT, EGL_NATIVE_PIXMAP_KHR, (EGLClientBuffer)(&pixmap), NULL);
+  if (image == EGL_NO_IMAGE_KHR) {
+    fprintf(stderr, "error: eglCreateImageKHR failed\n");
+    fprintf(stderr, "errcode = 0x%x\n", eglGetError());
+    return -4;
+  }
+
+  eglDestroyImageKHR(dpy, image);
+  free(pixdata);
+
+  return 0;
+}
+
 int main(int argc, char* argv[]) {
   EGLDisplay disp;
   EGLContext ctx;
@@ -67,6 +134,8 @@ int main(int argc, char* argv[]) {
 
   setup_hook();
 
+  /* TODO: Try adding EGL_PIXMAP_BIT for EGL_SURFACE_TYPE.
+   *       Also look into EGL_MATCH_NATIVE_PIXMAP. */
   static const EGLint attribs[] = {
     EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT,
     EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
@@ -126,6 +195,8 @@ int main(int argc, char* argv[]) {
     fprintf(stderr, "error: eglMakeCurrent failed\n");
     return -7;
   }
+
+  pixmap_test(disp, ctx, conf, surf);
 
   eglSwapInterval(disp, 1);
 
