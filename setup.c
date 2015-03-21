@@ -130,8 +130,8 @@ static void clean_up_pages(struct exynos_page *p, unsigned cnt) {
   }
 }
 
-/* The main pageflip handler, which the DRM executes when it flips to the page. *
- * Decreases the pending pageflip count and updates the current page.           */
+/* The main pageflip handler which is used by drmHandleEvent.         *
+ * Decreases the pending pageflip count and updates the current page. */
 static void page_flip_handler(int fd, unsigned frame, unsigned sec,
                               unsigned usec, void *data) {
   struct exynos_page *page = data;

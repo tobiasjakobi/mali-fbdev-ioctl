@@ -39,7 +39,9 @@
 #define MAP_SHARED 0x01
 
 
-/* ioctl used by the Mali blob */
+/* ioctl used by the Mali blob.
+ * FIXME: Apparantly the ioctl isn't used after all,
+ * at least the fbdev blob doesn't call it. */
 #define IOCTL_GET_FB_DMA_BUF _IOWR('m', 0xF9, __u32)
 
 typedef int (*openfnc)(const char*, int, mode_t);
