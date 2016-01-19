@@ -17,7 +17,14 @@
 
 #include "common.h"
 
-#include "mali_ioctl.h"
+#if MALI_VERSION == 0x0400
+  #include "mali_ioctl_r4p0.h"
+#elif MALI_VERSION == 0x0500
+  #include "mali_ioctl_r5p0.h"
+#else
+  #error "Unsupported Mali version requested!"
+#endif
+
 
 static int fbdev_fd = -1;
 static int mali_fd = -1;

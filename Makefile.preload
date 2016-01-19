@@ -15,6 +15,12 @@ ifeq (debug,$(build))
 cflags += -O0 -g -DHOOK_VERBOSE=1
 endif
 
+ifeq (1,$(use_r4p0))
+cflags += -DMALI_VERSION=0x0400
+else
+cflags += -DMALI_VERSION=0x0500
+endif
+
 objects := hook.so dump.so
 
 all: $(objects)
