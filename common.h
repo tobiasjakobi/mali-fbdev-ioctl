@@ -36,7 +36,7 @@
 
 /* mmap defines */
 #define PROT_WRITE 0x2
-#define MAP_SHARED 0x01
+#define MAP_SHARED 0x1
 
 
 /* ioctl used by the Mali blob.
