@@ -69,9 +69,9 @@ struct exynos_drm {
 
   struct exynos_prop *properties;
 
+  /* Atomic requests for the initial and the restore modeset. */
   drmModeAtomicReq *modeset_request;
   drmModeAtomicReq *restore_request;
-  drmModeAtomicReq *disable_request;
 };
 
 static const struct exynos_prop prop_template[] = {
