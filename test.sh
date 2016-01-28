@@ -1,7 +1,7 @@
 #!/bin/bash
 
 function ioctl_test {
-  local libmali="${HOME}/local/lib/mali-r4p0-fbdev"
+  local libmali="${HOME}/local/lib/mali-r5p0-fbdev"
   local glmark="${HOME}/local/bin/glmark2-es2"
 
   case "${1}" in
