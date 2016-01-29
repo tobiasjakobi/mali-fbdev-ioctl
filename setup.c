@@ -275,6 +275,27 @@ out:
   return found;
 }
 
+static bool check_connector_type(uint32_t connector_type) {
+  unsigned t;
+
+  switch (connector_type) {
+    case DRM_MODE_CONNECTOR_HDMIA:
+    case DRM_MODE_CONNECTOR_HDMIB:
+      t = connector_hdmi;
+      break;
+
+    case DRM_MODE_CONNECTOR_VGA:
+      t = connector_vga;
+      break;
+
+    default:
+      t = connector_other;
+      break;
+  }
+
+  return (t == vconf.connector_type);
+}
+
 static int exynos_open(struct hook_data *data) {
   char buf[32];
   int devidx;
@@ -339,14 +360,12 @@ static int exynos_open(struct hook_data *data) {
   }
 
   for (i = 0; i < resources->count_connectors; ++i) {
-    if (vconf.monitor_index != 0 && vconf.monitor_index - 1 != i)
-      continue;
-
     connector = drmModeGetConnector(fd, resources->connectors[i]);
     if (connector == NULL)
       continue;
 
-    if (connector->connection == DRM_MODE_CONNECTED &&
+    if (check_connector_type(connector->connector_type) &&
+        connector->connection == DRM_MODE_CONNECTED &&
         connector->count_modes > 0)
       break;
 

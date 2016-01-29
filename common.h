@@ -90,13 +90,19 @@ struct hook_data {
   unsigned pageflip_pending;
 };
 
+enum e_connector_type {
+  connector_hdmi = 0,
+  connector_vga,
+  connector_other
+};
+
 struct video_config {
   unsigned width;
   unsigned height;
   unsigned bpp; /* bytes per pixel */
   unsigned num_buffers;
   unsigned use_screen;
-  unsigned monitor_index;
+  unsigned connector_type;
 };
 
 typedef int (*hsetupfnc)(struct hook_data*);

@@ -52,8 +52,8 @@ const struct video_config vconf = {
   .height = 720,
   .bpp = 4,
   .num_buffers = 3,
-  .use_screen = 0,
-  .monitor_index = 0
+  .use_screen = 1,
+  .connector_type = connector_hdmi
 };
 
 extern void setup_hook();
