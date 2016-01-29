@@ -547,7 +547,11 @@ static int exynos_create_restore_req(int fd, struct exynos_drm *drm) {
     crtc_prop_active,
     crtc_prop_mode_id,
     plane_prop_fb_id,
-    plane_prop_crtc_id
+    plane_prop_crtc_id,
+    plane_prop_crtc_x, plane_prop_crtc_y,
+    plane_prop_crtc_w, plane_prop_crtc_h,
+    plane_prop_src_x, plane_prop_src_y,
+    plane_prop_src_w, plane_prop_src_h
   };
   const unsigned num_props = sizeof(restore_props) / sizeof(restore_props[0]);
 
@@ -593,8 +597,8 @@ static int exynos_create_modeset_req(int fd, struct exynos_drm *drm, unsigned w,
     { plane_prop_crtc_h, h },
     { plane_prop_src_x, 0 },
     { plane_prop_src_y, 0 },
-    { plane_prop_src_w, w },
-    { plane_prop_src_h, h }
+    { plane_prop_src_w, w << 16 },
+    { plane_prop_src_h, h << 16 }
   };
 
   const unsigned num_assign = sizeof(assign) / sizeof(assign[0]);
@@ -740,6 +744,8 @@ static int exynos_create_page_req(struct exynos_page *p) {
   assert(p);
 
   drm = p->base->drm;
+
+  assert(p->atomic_request == NULL);
 
   p->atomic_request = drmModeAtomicAlloc();
   if (!p->atomic_request)
