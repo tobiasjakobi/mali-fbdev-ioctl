@@ -1,0 +1,14 @@
+Steps to integrate this preloader into an existing application
+
+Setup a externally visible struct video_config (see common header for definition). Declare a extern void setup_hook() and call this as soon as possible in your application.
+
+Fill a struct mali_native_window with the same parameters as video_config and pass this to eglCreateWindowSurface() as the native_window argument.
+
+The rest of the EGL setup remains standard.
+
+Link the application with the libioctlsetup archive.
+
+Before starting the application first create a file 'fake_fbdev' in /dev/shm. Now start the application preloading (with LD_PRELOAD) the 'hook' shared object.
+
+
+Use test.c as reference for integration. test.sh shows how to start the application.
