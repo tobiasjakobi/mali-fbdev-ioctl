@@ -2,6 +2,7 @@ optflags := -O2 -march=armv7-a -mcpu=cortex-a9 -mfpu=neon -mfloat-abi=hard
 compiler := gcc
 cflags   := -D_GNU_SOURCE -fPIC -rdynamic
 ldflags  := -shared -nostartfiles
+destdir  := /usr/local
 
 ifndef platform
 platform := $(shell $(compiler) -dumpmachine)
@@ -13,6 +14,10 @@ endif
 
 ifeq (debug,$(build))
 cflags += -O0 -g -DHOOK_VERBOSE=1
+endif
+
+ifneq (,$(DESTDIR))
+destdir := $(DESTDIR)
 endif
 
 ifeq (1,$(use_r4p0))
@@ -35,3 +40,6 @@ clean:
 
 strip:
 	strip -s $(objects)
+
+install: $(objects)
+	cp $(objects) $(destdir)/lib/
