@@ -129,7 +129,7 @@ static int get_device_index() {
     snprintf(buf, sizeof(buf), "/dev/dri/card%d", index);
 
     fd = open(buf, O_RDWR);
-    if (fd == -1) break;
+    if (fd < 0) break;
 
     ver = drmGetVersion(fd);
 
@@ -321,7 +321,7 @@ static int exynos_open(struct hook_data *data) {
   }
 
   fd = data->open(buf, O_RDWR, 0);
-  if (fd == -1) {
+  if (fd < 0) {
     fprintf(stderr, "[exynos_open] error: failed to open DRM device\n");
     return -1;
   }
