@@ -450,7 +450,7 @@ static int exynos_open(struct hook_data *data) {
     goto fail;
   }
 
-  /* Check that the primary plane supportxs XRGB8888. */
+  /* Check that the primary plane supports XRGB8888. */
   for (i = 0; i < planes[0]->count_formats; ++i) {
     if (planes[0]->formats[i] == DRM_FORMAT_XRGB8888)
       break;
