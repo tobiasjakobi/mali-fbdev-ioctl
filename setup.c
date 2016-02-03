@@ -743,7 +743,8 @@ fail:
 
 /* Counterpart to exynos_init. */
 static void exynos_deinit(struct hook_data *data) {
-  drmModeDestroyPropertyBlob(data->drm_fd, data->drm->mode_blob_id);
+  if (data->drm)
+    drmModeDestroyPropertyBlob(data->drm_fd, data->drm->mode_blob_id);
 
   data->width = 0;
   data->height = 0;
