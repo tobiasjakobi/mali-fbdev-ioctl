@@ -78,6 +78,79 @@ void setup_hook_callback(hsetupfnc init_, hsetupfnc free_,
   hbuffer = buffer_;
 }
 
+static const char* translate_mali_ioctl(unsigned long request) {
+  switch (request) {
+   case MALI_IOC_WAIT_FOR_NOTIFICATION:
+      return "MALI_IOC_WAIT_FOR_NOTIFICATION";
+   case MALI_IOC_GET_API_VERSION:
+      return "MALI_IOC_GET_API_VERSION";
+   case MALI_IOC_GET_API_VERSION_V2:
+      return "MALI_IOC_GET_API_VERSION_V2";
+   case MALI_IOC_POST_NOTIFICATION:
+      return "MALI_IOC_POST_NOTIFICATION";
+   case MALI_IOC_GET_USER_SETTING:
+      return "MALI_IOC_GET_USER_SETTING";
+   case MALI_IOC_GET_USER_SETTINGS:
+      return "MALI_IOC_GET_USER_SETTINGS";
+   case MALI_IOC_REQUEST_HIGH_PRIORITY:
+      return "MALI_IOC_REQUEST_HIGH_PRIORITY";
+   case MALI_IOC_TIMELINE_GET_LATEST_POINT:
+      return "MALI_IOC_TIMELINE_GET_LATEST_POINT";
+   case MALI_IOC_TIMELINE_WAIT:
+      return "MALI_IOC_TIMELINE_WAIT";
+   case MALI_IOC_TIMELINE_CREATE_SYNC_FENCE:
+      return "MALI_IOC_TIMELINE_CREATE_SYNC_FENCE";
+   case MALI_IOC_SOFT_JOB_START:
+      return "MALI_IOC_SOFT_JOB_START";
+   case MALI_IOC_SOFT_JOB_SIGNAL:
+      return "MALI_IOC_SOFT_JOB_SIGNAL";
+   case MALI_IOC_MEM_MAP_EXT:
+      return "MALI_IOC_MEM_MAP_EXT";
+   case MALI_IOC_MEM_UNMAP_EXT:
+      return "MALI_IOC_MEM_UNMAP_EXT";
+   case MALI_IOC_MEM_ATTACH_DMA_BUF:
+      return "MALI_IOC_MEM_ATTACH_DMA_BUF";
+   case MALI_IOC_MEM_RELEASE_DMA_BUF:
+      return "MALI_IOC_MEM_RELEASE_DMA_BUF";
+   case MALI_IOC_MEM_DMA_BUF_GET_SIZE:
+      return "MALI_IOC_MEM_DMA_BUF_GET_SIZE";
+   case MALI_IOC_MEM_QUERY_MMU_PAGE_TABLE_DUMP_SIZE:
+      return "MALI_IOC_MEM_QUERY_MMU_PAGE_TABLE_DUMP_SIZE";
+   case MALI_IOC_MEM_DUMP_MMU_PAGE_TABLE:
+      return "MALI_IOC_MEM_DUMP_MMU_PAGE_TABLE";
+   case MALI_IOC_MEM_WRITE_SAFE:
+      return "MALI_IOC_MEM_WRITE_SAFE";
+   case MALI_IOC_PP_START_JOB:
+      return "MALI_IOC_PP_START_JOB";
+   case MALI_IOC_PP_AND_GP_START_JOB:
+      return "MALI_IOC_PP_AND_GP_START_JOB";
+   case MALI_IOC_PP_NUMBER_OF_CORES_GET:
+      return "MALI_IOC_PP_NUMBER_OF_CORES_GET";
+   case MALI_IOC_PP_CORE_VERSION_GET:
+      return "MALI_IOC_PP_CORE_VERSION_GET";
+   case MALI_IOC_PP_DISABLE_WB:
+      return "MALI_IOC_PP_DISABLE_WB";
+   case MALI_IOC_GP2_START_JOB:
+      return "MALI_IOC_GP2_START_JOB";
+   case MALI_IOC_GP2_NUMBER_OF_CORES_GET:
+      return "MALI_IOC_GP2_NUMBER_OF_CORES_GET";
+   case MALI_IOC_GP2_CORE_VERSION_GET:
+      return "MALI_IOC_GP2_CORE_VERSION_GET";
+   case MALI_IOC_GP2_SUSPEND_RESPONSE:
+      return "MALI_IOC_GP2_SUSPEND_RESPONSE";
+   case MALI_IOC_PROFILING_ADD_EVENT:
+      return "MALI_IOC_PROFILING_ADD_EVENT";
+   case MALI_IOC_PROFILING_REPORT_SW_COUNTERS:
+      return "MALI_IOC_PROFILING_REPORT_SW_COUNTERS";
+   case MALI_IOC_PROFILING_MEMORY_USAGE_GET:
+      return "MALI_IOC_PROFILING_MEMORY_USAGE_GET";
+   case MALI_IOC_VSYNC_EVENT_REPORT:
+      return "MALI_IOC_VSYNC_EVENT_REPORT";
+   default:
+      return "UNKNOWN";
+  }
+}
+
 static int emulate_get_var_screeninfo(void *ptr) {
 #ifdef HOOK_VERBOSE
   fprintf(stderr, "info: emulate_get_var_screeninfo called\n");
@@ -342,7 +415,7 @@ int ioctl(int fd, unsigned long request, ...) {
 
       default:
 #ifdef HOOK_VERBOSE
-        fprintf(stderr, "info: unhooked mali ioctl (0x%x) called\n", (unsigned int)request);
+        fprintf(stderr, "info: unhooked mali ioctl (%s) called\n", translate_mali_ioctl(request));
 #endif
         ret = hook.ioctl(fd, request, p);
         break;
