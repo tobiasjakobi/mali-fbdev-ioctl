@@ -109,8 +109,10 @@ typedef int (*hsetupfnc)(struct hook_data*);
 typedef int (*hflipfnc)(struct hook_data*, unsigned);
 typedef int (*hbufferfnc)(struct hook_data*, unsigned);
 
+#ifdef _IN_PRELOADER_SOURCE
 static const char *fbdev_name = "/dev/fb0";
 static const char *mali_name = "/dev/mali";
 static const char *fake_fbdev = "/dev/shm/fake_fbdev";
+#endif
 
 #endif /* _COMMON_H_ */
