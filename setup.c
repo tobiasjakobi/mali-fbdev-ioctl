@@ -574,7 +574,6 @@ static int exynos_create_restore_req(int fd, struct exynos_drm *drm) {
   };
   const unsigned num_props = sizeof(restore_props) / sizeof(restore_props[0]);
 
-  uint64_t temp;
   unsigned i;
 
   assert(!drm->restore_request);
@@ -605,7 +604,6 @@ fail:
 }
 
 static int exynos_create_modeset_req(int fd, struct exynos_drm *drm, unsigned w, unsigned h) {
-  uint64_t temp;
   unsigned i;
 
   const struct prop_assign assign[] = {
@@ -895,8 +893,6 @@ fail_alloc:
 
 /* Counterpart to exynos_alloc. */
 static void exynos_free(struct hook_data *data) {
-  unsigned i;
-
   if (vconf.use_screen == 1) {
     /* Disable/restore the display. */
     if (drmModeAtomicCommit(data->drm_fd, data->drm->restore_request,
@@ -1038,8 +1034,6 @@ out:
 }
 
 static int hook_free(struct hook_data *data) {
-  unsigned i;
-
   pthread_mutex_lock(&hook_mutex);
 
   if (data->initialized == 0)
