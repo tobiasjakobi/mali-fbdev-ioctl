@@ -1,6 +1,6 @@
 optflags := -O2 -march=armv7-a -mcpu=cortex-a9 -mfpu=neon -mfloat-abi=hard
 compiler := gcc
-cflags   := -D_GNU_SOURCE -fPIC -rdynamic
+cflags   := -Wall -D_IN_PRELOADER_SOURCE=1 -D_GNU_SOURCE -fPIC -rdynamic
 ldflags  := -shared -nostartfiles
 destdir  := /usr/local
 
