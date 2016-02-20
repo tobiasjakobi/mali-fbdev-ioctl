@@ -1,0 +1,36 @@
+This document explains the binary patching of the Mali r5p0 fbdev blob.
+
+binary SHA512 checksum of original file:
+d804de4fa1bddbe9796bbe2cd6d6a6a975ad03cbb5a00ab082cbec2606d21b72b9a1c0e812f6e11b17b4c25ab37034da68ae581fa415328f796c2f90adee3aa9
+
+The original file isn't stripped, so all the symbol information is available. We need to patch two calls, __egl_platform_pixmap_support_ump and __egl_platform_pixmap_valid.
+
+This is how the original __egl_platform_pixmap_support_ump looks like:
+
+00064f2a <__egl_platform_pixmap_support_ump>:
+   64f2a:       6943            ldr     r3, [r0, #20]
+   64f2c:       f013 0f11       tst.w   r3, #17
+   64f30:       bf14            ite     ne
+   64f32:       2001            movne   r0, #1
+   64f34:       2000            moveq   r0, #0
+   64f36:       4770            bx      lr
+
+The return value is returned in r0, so the easiest way to patch this is to modify location 0x64f34.
+
+This is how the original __egl_platform_pixmap_support_ump looks like:
+
+00064f14 <__egl_platform_pixmap_valid>:
+   64f14:       b140            cbz     r0, 64f28 <__egl_platform_pixmap_valid+0x14>
+   64f16:       6943            ldr     r3, [r0, #20]
+   64f18:       07db            lsls    r3, r3, #31
+   64f1a:       d404            bmi.n   64f26 <__egl_platform_pixmap_valid+0x12>
+   64f1c:       6980            ldr     r0, [r0, #24]
+   64f1e:       3000            adds    r0, #0
+   64f20:       bf18            it      ne
+   64f22:       2001            movne   r0, #1
+   64f24:       4770            bx      lr
+   64f26:       2000            movs    r0, #0
+   64f28:       4770            bx      lr
+
+This loads the flags of the fbdev_pixmap object into r3 and checks them (location 0x64f18). Apparantly for non-ump builds of the blob the check fails if any bit is set.
+Here we just patch the branch instruction at location 0x64f1a.
