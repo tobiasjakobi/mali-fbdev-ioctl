@@ -32,6 +32,8 @@
 #include <stdlib.h>
 #include <assert.h>
 
+typedef int (*getdrmfbcbfnc)();
+
 /* Some envvars that the blob seems to use:
  * MALI_NOCLEAR
  * MALI_MAX_WINDOW_BUFFERS (defaults seems to be 2)
@@ -134,49 +136,30 @@ static int dump_egl_surface(EGLDisplay dpy, EGLSurface surf) {
   return 0;
 }
 
-/*
- * Open the DRM device as control client.
- * This allows us to allocate GEM object and to
- * map them, but no modesetting operations.
- */
-static int open_control_device() {
-  char buf[32];
-  drmVersionPtr ver;
-
-  int index = 64;
-
-  while (1) {
-    int fd, found;
-
-    snprintf(buf, sizeof(buf), "/dev/dri/controlD%d", index);
-
-    fd = open(buf, O_RDWR);
-    if (fd < 0)
-      return -1;
-
-    ver = drmGetVersion(fd);
-    found = (strcmp("exynos", ver->name) == 0);
-    drmFreeVersion(ver);
-
-    if (found)
-      return fd;
-
-    close(fd);
-    ++index;
-  }
-}
-
 static struct bo_obj* alloc_bo(unsigned bytes) {
   struct exynos_device *dev;
   struct exynos_bo *bo;
   struct bo_obj* obj;
+
+  static getdrmfbcbfnc hook_get_drm_fd = NULL;
 
   struct drm_prime_handle req = { 0 };
   int drm_fd;
 
   assert(bytes);
 
-  drm_fd = open_control_device();
+  if (!hook_get_drm_fd) {
+    const char* err;
+
+    err = dlerror();
+    hook_get_drm_fd = dlsym(RTLD_DEFAULT, "hook_get_drm_fd");
+    err = dlerror();
+
+    if (err || !hook_get_drm_fd)
+      return NULL;
+  }
+
+  drm_fd = hook_get_drm_fd();
   if (drm_fd < 0)
     return NULL;
 
@@ -207,24 +190,19 @@ fail_prime:
 
 fail:
   exynos_device_destroy(dev);
-  close(drm_fd);
 
   return NULL;
 }
 
 static void free_bo(struct bo_obj *obj) {
   struct exynos_device *dev;
-  int drm_fd;
 
   assert(obj);
 
   dev = obj->bo->dev;
   exynos_bo_destroy(obj->bo);
-
-  drm_fd = dev->fd;
   exynos_device_destroy(dev);
 
-  close(drm_fd);
   free(obj);
 }
 
@@ -449,9 +427,8 @@ static int egl_image_test(EGLDisplay dpy) {
   if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
     fprintf(stderr, "info: framebuffer not complete\n");
 
-  /* TODO */
   fprintf(stderr, "info: clearing EGL image\n");
-  glClearColor(1.0, 0.5, 0.5, 1.0);
+  glClearColor(0.5, 1.0, 0.5, 0.75);
   glClear(GL_COLOR_BUFFER_BIT);
 
   fprintf(stderr, "info: calling glFinish()\n");

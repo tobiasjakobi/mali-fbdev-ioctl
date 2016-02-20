@@ -78,6 +78,10 @@ void setup_hook_callback(hsetupfnc init_, hsetupfnc free_,
   hbuffer = buffer_;
 }
 
+int hook_get_drm_fd() {
+  return hook.drm_fd;
+}
+
 static const char* translate_mali_ioctl(unsigned long request) {
   switch (request) {
    case MALI_IOC_WAIT_FOR_NOTIFICATION:
@@ -395,7 +399,7 @@ int ioctl(int fd, unsigned long request, ...) {
         break;
 
       case IOCTL_GET_FB_DMA_BUF:
-        ret = emulate_get_fb_dma_buf_cb(p);
+        ret = emulate_get_fb_dma_buf(p);
         break;
 
       default:
