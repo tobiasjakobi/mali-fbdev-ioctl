@@ -53,6 +53,10 @@ struct egl_attr {
   EGLint id;
 };
 
+/*
+ * TODO: Check if the padding is necessary and which area of
+ *       memory the blob utilizes.
+ */
 struct dmabuf_obj {
   int fd;
   uint32_t padding[15];
