@@ -42,6 +42,21 @@ typedef int (*getdrmfbcbfnc)();
  * MALI_SINGLEBUFFER (do all rendering in one buffer)
  * MALI_FLIP_PIXMAP
  * MALI_NEVERBLIT
+ * FRONTBUFFER_LOCKING
+ */
+
+/*
+ * getenv() is called in:
+ *  [1] __egl_get_main_context()
+ *       MALI_NEVERBLIT, MALI_FLIP_PIXMAP
+ *  [2] __egl_platform_display_map_framebuffer_memory()
+ *       MALI_NOCLEAR
+ *  [3] __egl_platform_init_display()
+ *       FRAMEBUFFER, MALI_MAX_WINDOW_BUFFERS, MALI_FBDEV
+ *  [4] __egl_platform_create_surface_window()
+ *       MALI_SINGLEBUFFER
+ *  [5] __egl_frontbuffer_locking_needed() [?]
+ *  [6] _mali_osu_config_string_get() [?]
  */
 
 struct color3f {
