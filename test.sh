@@ -17,10 +17,11 @@ function ioctl_test {
       LD_PRELOAD=./hook.so LD_LIBRARY_PATH=$libmali strace ./test 2> trace.out ;;
     "glmark" )
       touch "/dev/shm/fake_fbdev"
-      LD_PRELOAD=./hook.so LD_LIBRARY_PATH=$libmali $glmark ;;
+      shift
+      LD_PRELOAD=./hook.so LD_LIBRARY_PATH=$libmali $glmark "$@" ;;
     * )
       LD_LIBRARY_PATH=$libmali ./test ;;
     esac
 }
 
-ioctl_test "${1}"
+ioctl_test "$@"
